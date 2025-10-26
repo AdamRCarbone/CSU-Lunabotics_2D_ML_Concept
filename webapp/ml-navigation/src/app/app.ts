@@ -1,12 +1,20 @@
-import { Component, signal } from '@angular/core';
+import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { EnvironmentComponent } from '../environment/environment';
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet],
+  standalone: true,
+  imports: [RouterOutlet, EnvironmentComponent],
   templateUrl: './app.html',
-  styleUrl: './app.css'
+  styleUrls: ['./app.css']
+  
 })
 export class App {
-  protected readonly title = signal('ml-navigation');
+  title = 'ml-navigation';
+
+  public window_width = window.innerWidth;
+  public window_height = window.innerHeight;
+  public grid_size = 100;
+  public cell_size = this.window_height/this.grid_size
 }
