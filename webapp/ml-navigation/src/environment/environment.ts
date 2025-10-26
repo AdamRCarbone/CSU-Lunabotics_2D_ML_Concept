@@ -24,10 +24,10 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
 
   public environment_width = this.App.window_width/1.5;
   public environment_height =this.App.window_width/1.5;
-  public grid_size = 100;
+  public grid_size = 50;
   public cell_size = this.environment_height/this.grid_size
   public environment_border_radius = this.cell_size/2.5;
-  public environment_stroke_weight = this.cell_size/1.25;
+  public environment_stroke_weight = this.cell_size/2;
 
   ngOnInit() {
     this.p5Instance = new p5((p: p5) => {

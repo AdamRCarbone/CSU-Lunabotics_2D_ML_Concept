@@ -63,22 +63,24 @@ export class RoverComponent {
   private turnSpeed: number = 1; // Degrees per frame
   private pressedKeys = new Set<string>();
 
-  update(p: p5) {
-    if (this.pressedKeys.has('w')) {
-      this.x += this.speed * p.sin(this.theta);
-      this.y -= this.speed * p.cos(this.theta);
-    }
-    if (this.pressedKeys.has('s')) {
-      this.x -= this.speed * p.sin(this.theta);
-      this.y += this.speed * p.cos(this.theta);
-    }
-    if (this.pressedKeys.has('a')) {
-      this.theta -= this.turnSpeed;
-    }
-    if (this.pressedKeys.has('d')) {
-      this.theta += this.turnSpeed;
-    }
+update(p: p5) {
+  let rotationModifier = 1; // Foward
+  if (this.pressedKeys.has('s')) {
+    rotationModifier = -1; // Reverse
+    this.x -= this.speed * p.sin(this.theta);
+    this.y += this.speed * p.cos(this.theta);
   }
+  if (this.pressedKeys.has('w')) {
+    this.x += this.speed * p.sin(this.theta);
+    this.y -= this.speed * p.cos(this.theta);
+  }
+  if (this.pressedKeys.has('a')) {
+    this.theta -= this.turnSpeed * rotationModifier;
+  }
+  if (this.pressedKeys.has('d')) {
+    this.theta += this.turnSpeed * rotationModifier;
+  }
+}
 
 draw(p: p5) {
     p.push();
