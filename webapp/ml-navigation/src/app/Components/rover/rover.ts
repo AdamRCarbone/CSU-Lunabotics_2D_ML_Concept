@@ -1,6 +1,7 @@
-// app/Components/rover/rover.ts
-import { Component, inject } from '@angular/core';
-import { EnvironmentComponent } from '../../../environment/environment';
+// src/app/Components/rover/rover.ts
+import { Component, OnInit, OnDestroy } from '@angular/core';
+import { WindowSizeService } from '../../services/window-size';
+import { Subscription } from 'rxjs';
 import p5 from 'p5';
 
 @Component({
@@ -9,92 +10,155 @@ import p5 from 'p5';
   template: '', // rendering handled by p5
   styleUrls: ['./rover.css']
 })
-export class RoverComponent {
-  // Inject EnvironmentComponent to access shared properties
-  environment = inject(EnvironmentComponent);
-  window_width = this.environment.environment_width;
-  window_height = this.environment.environment_height;
+export class RoverComponent implements OnInit, OnDestroy {
+  private windowSizeSubscription!: Subscription;
 
-  //Grid Properties
-  grid_size = this.environment.grid_size;
-  cell = this.environment.cell_size;
+  // Properties to be updated
+  window_width!: number;
+  window_height!: number;
+  grid_size: number = 50; // Match EnvironmentComponent
+  cell!: number;
+  Rover_Stroke_Thickness!: number;
+  Rover_Stroke_Color: number = 20;
+  Rover_Width!: number;
+  Rover_Height!: number;
+  Rover_Radius!: number;
+  Rover_Origin_X!: number;
+  Rover_Origin_Y!: number;
+  Wheel_Width!: number;
+  Wheel_Height!: number;
+  Wheel_Left_X!: number;
+  Wheel_Right_X!: number;
+  Wheel_Front_Y!: number;
+  Wheel_Middle_Y!: number;
+  Wheel_Back_Y!: number;
+  Bucket_Width!: number;
+  Bucket_Height!: number;
+  Bucket_X!: number;
+  Bucket_Y!: number;
+  Bucket_Top_Radius!: number;
+  Bucket_Bottom_Radius!: number;
+  Bucket_Arm_Width!: number;
+  Bucket_Arm_Height!: number;
+  Bucket_Arm_Left_X!: number;
+  Bucket_Arm_Right_X!: number;
+  Bucket_Arm_Y!: number;
 
-  //Rover Variables
-  Rover_Stroke_Thickness = 0.25 * this.cell;
-  Rover_Stroke_Color = 20;
-
-  Rover_Width = this.cell*3;
-  Rover_Height = this.cell*5;
-  Rover_Radius = this.cell*0.5;
-  Rover_Origin_X = this.Rover_Width/2;
-  Rover_Origin_Y = this.Rover_Height/2;
-
-  //Wheel Variables
-  Wheel_Width = this.Rover_Width / 4;
-  Wheel_Height = this.Rover_Height / 4;
-
-  Wheel_Left_X = -(3 / 4) * this.Rover_Width;
-  Wheel_Right_X = (1 / 2) * this.Rover_Width;
-
-  Wheel_Front_Y = -this.Rover_Height / 2;
-  Wheel_Middle_Y = -this.Rover_Height / 8;
-  Wheel_Back_Y = this.Rover_Height / 4;
-
-  //Bucket Variables
-  Bucket_Width = this.Rover_Width*1.375;
-  Bucket_Height = this.Rover_Height / 5;
-  Bucket_X = -this.Bucket_Width / 2
-  Bucket_Y = -this.Rover_Height/1.25;
-  Bucket_Top_Radius = this.Rover_Radius / 4;
-  Bucket_Bottom_Radius = this.Rover_Radius*1.5;
-  
-  Bucket_Arm_Width = this.Bucket_Height/2.5;
-  Bucket_Arm_Height = this.Bucket_Height * 1.5;
-  Bucket_Arm_Left_X = -this.Bucket_Width / 5;
-  Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width
-  Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
-  
-
-  //Rover State
-  private x: number = this.window_width / 2;
-  private y: number = this.window_height / 2;
+  // Rover State
+  private x!: number;
+  private y!: number;
   private theta: number = 0; // Angle in degrees
-  private speed: number = 0.1 * this.cell; // Pixels per frame
+  private speed!: number;
   private turnSpeed: number = 1; // Degrees per frame
   private pressedKeys = new Set<string>();
 
-update(p: p5) {
-  let rotationModifier = 1; // Foward
-  if (this.pressedKeys.has('s')) {
-    rotationModifier = -1; // Reverse
-    this.x -= this.speed * p.sin(this.theta);
-    this.y += this.speed * p.cos(this.theta);
+  constructor(private windowSizeService: WindowSizeService) {
+    // Initialize with current window size
+    const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
+    this.updateProperties(height);
+    this.x = this.window_width / 2;
+    this.y = this.window_height / 2;
   }
-  if (this.pressedKeys.has('w')) {
-    this.x += this.speed * p.sin(this.theta);
-    this.y -= this.speed * p.cos(this.theta);
-  }
-  if (this.pressedKeys.has('a')) {
-    this.theta -= this.turnSpeed * rotationModifier;
-  }
-  if (this.pressedKeys.has('d')) {
-    this.theta += this.turnSpeed * rotationModifier;
-  }
-}
 
-draw(p: p5) {
+  private updateProperties(windowHeight: number) {
+    // Match EnvironmentComponent's logic: environment_width/height = window_height / 1.5
+    this.window_width = windowHeight / 1.5;
+    this.window_height = windowHeight / 1.5;
+    this.cell = this.window_height / this.grid_size;
+
+    // Rover Properties
+    this.Rover_Stroke_Thickness = 0.25 * this.cell;
+    this.Rover_Width = this.cell * 3;
+    this.Rover_Height = this.cell * 5;
+    this.Rover_Radius = this.cell * 0.5;
+    this.Rover_Origin_X = this.Rover_Width / 2;
+    this.Rover_Origin_Y = this.Rover_Height / 2;
+
+    // Wheel Properties
+    this.Wheel_Width = this.Rover_Width / 4;
+    this.Wheel_Height = this.Rover_Height / 4;
+    this.Wheel_Left_X = -(3 / 4) * this.Rover_Width;
+    this.Wheel_Right_X = (1 / 2) * this.Rover_Width;
+    this.Wheel_Front_Y = -this.Rover_Height / 2;
+    this.Wheel_Middle_Y = -this.Rover_Height / 8;
+    this.Wheel_Back_Y = this.Rover_Height / 4;
+
+    // Bucket Properties
+    this.Bucket_Width = this.Rover_Width * 1.375;
+    this.Bucket_Height = this.Rover_Height / 5;
+    this.Bucket_X = -this.Bucket_Width / 2;
+    this.Bucket_Y = -this.Rover_Height / 1.25;
+    this.Bucket_Top_Radius = this.Rover_Radius / 4;
+    this.Bucket_Bottom_Radius = this.Rover_Radius * 1.5;
+    this.Bucket_Arm_Width = this.Bucket_Height / 2.5;
+    this.Bucket_Arm_Height = this.Bucket_Height * 1.5;
+    this.Bucket_Arm_Left_X = -this.Bucket_Width / 5;
+    this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
+    this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
+
+    // Speed depends on cell
+    this.speed = 0.1 * this.cell;
+  }
+
+  ngOnInit() {
+    // Subscribe to window size changes
+    this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
+      // Store old dimensions before updating
+      const oldWidth = this.window_width;
+      const oldHeight = this.window_height;
+
+      // Update properties with new window size
+      this.updateProperties(height);
+
+      // Scale rover position to maintain relative position
+      if (oldWidth && oldHeight) { // Ensure old dimensions exist (not first call)
+        const widthRatio = this.window_width / oldWidth;
+        const heightRatio = this.window_height / oldHeight;
+        this.x *= widthRatio;
+        this.y *= heightRatio;
+      }
+    });
+  }
+
+  ngOnDestroy() {
+    if (this.windowSizeSubscription) {
+      this.windowSizeSubscription.unsubscribe();
+    }
+  }
+
+  update(p: p5) {
+    let rotationModifier = 1; // Forward
+    if (this.pressedKeys.has('s')) {
+      rotationModifier = -1; // Reverse
+      this.x -= this.speed * p.sin(this.theta);
+      this.y += this.speed * p.cos(this.theta);
+    }
+    if (this.pressedKeys.has('w')) {
+      this.x += this.speed * p.sin(this.theta);
+      this.y -= this.speed * p.cos(this.theta);
+    }
+    if (this.pressedKeys.has('a')) {
+      this.theta -= this.turnSpeed * rotationModifier;
+    }
+    if (this.pressedKeys.has('d')) {
+      this.theta += this.turnSpeed * rotationModifier;
+    }
+  }
+
+  // Draw the rover
+  draw(p: p5) {
     p.push();
     p.translate(this.x + this.Rover_Origin_X, this.y + this.Rover_Origin_Y); // Center of rover
     p.rotate(this.theta); // Make sure p.angleMode(p.DEGREES) is set in your sketch!
-    
-    //Rover Body
+
+    // Rover Body
     p.fill(100, 100, 100);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
     // Correctly centered rover body (using -Height/2)
-    p.rect(-this.Rover_Width/2, -this.Rover_Height/2, this.Rover_Width, this.Rover_Height, this.Rover_Radius); 
-    
-    //Wheels
+    p.rect(-this.Rover_Width / 2, -this.Rover_Height / 2, this.Rover_Width, this.Rover_Height, this.Rover_Radius);
+
+    // Wheels
     p.fill(25, 25, 25);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
@@ -111,7 +175,7 @@ draw(p: p5) {
     // Wheel 6 - Back Right
     p.rect(this.Wheel_Right_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
 
-    //Front Digging Bucket
+    // Front Digging Bucket
     p.fill(150, 150, 150);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
@@ -120,7 +184,7 @@ draw(p: p5) {
     p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     // Bucket Main Body
     p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
-    
+
     p.pop();
   }
 
