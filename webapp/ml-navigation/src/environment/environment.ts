@@ -27,6 +27,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public cell_size: number;
   public environment_border_radius: number;
   public environment_stroke_weight: number;
+  public rover_start_x: number;
+  public rover_start_y: number;
 
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize with current window size
@@ -36,6 +38,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.cell_size = this.environment_height / this.grid_size;
     this.environment_border_radius = this.cell_size / 2.5;
     this.environment_stroke_weight = this.cell_size / 2;
+    this.rover_start_x = this.environment_width / 8;
+    this.rover_start_y = this.environment_height / 1.15;
   }
 
   ngOnInit() {

@@ -1,7 +1,8 @@
 // src/app/Components/rover/rover.ts
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { WindowSizeService } from '../../services/window-size';
 import { Subscription } from 'rxjs';
+import { EnvironmentComponent } from '../../../environment/environment';
 import p5 from 'p5';
 
 @Component({
@@ -12,6 +13,7 @@ import p5 from 'p5';
 })
 export class RoverComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
+  environment = inject(EnvironmentComponent);
 
   // Properties to be updated
   window_width!: number;
@@ -56,8 +58,9 @@ export class RoverComponent implements OnInit, OnDestroy {
     // Initialize with current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
     this.updateProperties(height);
-    this.x = this.window_width / 2;
-    this.y = this.window_height / 2;
+    // Set initial position using environment's rover_start_x and rover_start_y
+    this.x = this.environment.rover_start_x - this.Rover_Origin_X;
+    this.y = this.environment.rover_start_y - this.Rover_Origin_Y;
   }
 
   private updateProperties(windowHeight: number) {
@@ -103,9 +106,11 @@ export class RoverComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
-      // Store old dimensions before updating
+      // Store old dimensions and position before updating
       const oldWidth = this.window_width;
       const oldHeight = this.window_height;
+      const oldX = this.x;
+      const oldY = this.y;
 
       // Update properties with new window size
       this.updateProperties(height);
@@ -114,8 +119,8 @@ export class RoverComponent implements OnInit, OnDestroy {
       if (oldWidth && oldHeight) { // Ensure old dimensions exist (not first call)
         const widthRatio = this.window_width / oldWidth;
         const heightRatio = this.window_height / oldHeight;
-        this.x *= widthRatio;
-        this.y *= heightRatio;
+        this.x = oldX * widthRatio;
+        this.y = oldY * heightRatio;
       }
     });
   }
@@ -145,7 +150,6 @@ export class RoverComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Draw the rover
   draw(p: p5) {
     p.push();
     p.translate(this.x + this.Rover_Origin_X, this.y + this.Rover_Origin_Y); // Center of rover
@@ -155,34 +159,25 @@ export class RoverComponent implements OnInit, OnDestroy {
     p.fill(100, 100, 100);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
-    // Correctly centered rover body (using -Height/2)
     p.rect(-this.Rover_Width / 2, -this.Rover_Height / 2, this.Rover_Width, this.Rover_Height, this.Rover_Radius);
 
     // Wheels
     p.fill(25, 25, 25);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
-    // Wheel 1 - Front Left
     p.rect(this.Wheel_Left_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    // Wheel 2 - Middle Left
     p.rect(this.Wheel_Left_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    // Wheel 3 - Back Left
     p.rect(this.Wheel_Left_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    // Wheel 4 - Front Right
     p.rect(this.Wheel_Right_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    // Wheel 5 - Middle Right
     p.rect(this.Wheel_Right_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    // Wheel 6 - Back Right
     p.rect(this.Wheel_Right_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
 
     // Front Digging Bucket
     p.fill(150, 150, 150);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
-    // Bucket Arms
     p.rect(this.Bucket_Arm_Left_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
-    // Bucket Main Body
     p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
 
     p.pop();
