@@ -53,12 +53,12 @@ export class RoverComponent implements OnInit, OnDestroy {
   private targetTheta: number = 0; // Target angle from slider
   private speed!: number;
   private _speedMultiplier: number = 1;
-  private turnSpeed: number = 1; // Degrees per frame
+  private turnSpeed: number = .25; // Degrees per frame
   private pressedKeys = new Set<string>();
 
   set speedMultiplier(value: number) {
     this._speedMultiplier = value;
-    this.speed = this._speedMultiplier * 0.1 * this.cell;
+    this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
   }
 
   get speedMultiplier(): number {
@@ -125,17 +125,17 @@ export class RoverComponent implements OnInit, OnDestroy {
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
-      // Store old dimensions and position before updating
+      // old dimensions and position
       const oldWidth = this.window_width;
       const oldHeight = this.window_height;
       const oldX = this.x;
       const oldY = this.y;
 
-      // Update properties with new window size
+      // Update new window size
       this.updateProperties(height);
 
-      // Scale rover position to maintain relative position
-      if (oldWidth && oldHeight) { // Ensure old dimensions exist (not first call)
+      // Scale rover position based on window
+      if (oldWidth && oldHeight) {
         const widthRatio = this.window_width / oldWidth;
         const heightRatio = this.window_height / oldHeight;
         this.x = oldX * widthRatio;
@@ -154,7 +154,7 @@ export class RoverComponent implements OnInit, OnDestroy {
     let rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
 
     // Handle movement
-    if (this.pressedKeys.has('w')) {
+    if (this.pressedKeys.has('w') || this._speedMultiplier > 0.1 || this._speedMultiplier < -0.1) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
     }
