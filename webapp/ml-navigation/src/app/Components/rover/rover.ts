@@ -49,7 +49,8 @@ export class RoverComponent implements OnInit, OnDestroy {
   // Rover State
   private x!: number;
   private y!: number;
-  private theta: number = 0; // Angle in degrees
+  private theta: number = 0; // Current angle in degrees
+  private targetTheta: number = 0; // Target angle from slider
   private speed!: number;
   private _speedMultiplier: number = 1;
   private turnSpeed: number = 1; // Degrees per frame
@@ -62,6 +63,14 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   get speedMultiplier(): number {
     return this._speedMultiplier;
+  }
+
+  set targetHeading(value: number) {
+    this.targetTheta = value;
+  }
+
+  get currentHeading(): number {
+    return this.theta;
   }
 
   constructor(private windowSizeService: WindowSizeService) {
@@ -144,6 +153,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   update(p: p5) {
     let rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
 
+    // Handle movement
     if (this.pressedKeys.has('w')) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
@@ -152,12 +162,34 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.x -= this.speed * p.sin(this.theta);
       this.y += this.speed * p.cos(this.theta);
     }
+
+    // Handle rotation from keyboard
+    let keyboardRotation = false;
     if (this.pressedKeys.has('a')) {
       this.theta -= this.turnSpeed * rotationModifier;
+      this.targetTheta = this.theta;
+      keyboardRotation = true;
     }
     if (this.pressedKeys.has('d')) {
       this.theta += this.turnSpeed * rotationModifier;
+      this.targetTheta = this.theta;
+      keyboardRotation = true;
     }
+
+    // Handle rotation from slider (move towards target at limited turnSpeed)
+    if (!keyboardRotation) {
+      const diff = this.targetTheta - this.theta;
+      if (Math.abs(diff) > 0.1) {
+        const rotationStep = Math.min(Math.abs(diff), this.turnSpeed) * Math.sign(diff);
+        this.theta += rotationStep;
+      }
+    }
+
+    // Normalize angle to 0-360 range
+    this.theta = this.theta % 360;
+    if (this.theta < 0) this.theta += 360;
+    this.targetTheta = this.targetTheta % 360;
+    if (this.targetTheta < 0) this.targetTheta += 360;
   }
 
   draw(p: p5) {

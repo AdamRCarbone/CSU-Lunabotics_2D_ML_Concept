@@ -24,6 +24,16 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.rover.speedMultiplier = value;
     }
   }
+
+  @Input() set roverTargetHeading(value: number) {
+    if (this.rover) {
+      this.rover.targetHeading = value;
+    }
+  }
+
+  get roverCurrentHeading(): number {
+    return this.rover ? this.rover.currentHeading : 0;
+  }
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
