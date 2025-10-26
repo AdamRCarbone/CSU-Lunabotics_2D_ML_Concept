@@ -1,6 +1,6 @@
 <div class="slider-container" [class.vertical-container]="isVertical" [class.horizontal-container]="!isVertical" [style.height]="containerHeight">
   @if (label) {
-    <label class="slider-pill" [style.color]="pillColor" [style.background]="pillBackground">{{ label }}</label>
+    <label class="slider-pill" [style.color]="color" [style.background]="pillBackground">{{ label }}</label>
   }
   <input
     type="range"
@@ -17,6 +17,6 @@
     [style.--thumb-offset]="thumbOffset"
   />
   @if (showValue) {
-    <span class="slider-pill" [style.color]="pillColor" [style.background]="pillBackground">{{ value() }}</span>
+    <span class="slider-pill" [style.color]="color" [style.background]="pillBackground">{{ value() }}</span>
   }
 </div>

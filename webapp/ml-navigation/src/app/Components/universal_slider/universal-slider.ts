@@ -20,11 +20,10 @@ export class UniversalSliderComponent implements OnInit, OnDestroy {
   @Input() heightPercent?: number; // 0-100 percentage of window height
 
   // Customization
+  @Input() color: string = '#1a73e8'; // Main accent color for thumb and pills
   @Input() thumbSize: number = 20;
-  @Input() thumbColor: string = '#008526ff';
   @Input() trackSize: number = 5;
   @Input() trackColor: string = '#e8eaed';
-  @Input() pillColor: string = '#008526ff';
   @Input() pillBgOpacity: number = 0.08;
 
   value = model<number>(0);
@@ -60,11 +59,15 @@ export class UniversalSliderComponent implements OnInit, OnDestroy {
   }
 
   get pillBackground(): string {
-    const hex = this.pillColor.replace('#', '');
+    const hex = this.color.replace('#', '');
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
     return `rgba(${r}, ${g}, ${b}, ${this.pillBgOpacity})`;
+  }
+
+  get thumbColor(): string {
+    return this.color;
   }
 
   get containerHeight(): string | undefined {
