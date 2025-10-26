@@ -3,11 +3,12 @@ import { Component, HostListener } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
+import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -17,6 +18,7 @@ export class App {
   public window_height = window.innerHeight;
   public grid_size = 100;
   public cell_size = this.window_height / this.grid_size;
+  public sliderValue: number = 0;
 
   constructor(private windowSizeService: WindowSizeService) {
     // Initial broadcast of window size

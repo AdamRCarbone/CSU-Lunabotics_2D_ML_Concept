@@ -1,0 +1,8 @@
+.slider-panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px;
+  background: #ffffff00;
+  min-width: 100px;
+}

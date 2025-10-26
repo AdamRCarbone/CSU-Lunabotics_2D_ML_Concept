@@ -51,8 +51,18 @@ export class RoverComponent implements OnInit, OnDestroy {
   private y!: number;
   private theta: number = 0; // Angle in degrees
   private speed!: number;
+  private _speedMultiplier: number = 1;
   private turnSpeed: number = 1; // Degrees per frame
   private pressedKeys = new Set<string>();
+
+  set speedMultiplier(value: number) {
+    this._speedMultiplier = value;
+    this.speed = this._speedMultiplier * 0.1 * this.cell;
+  }
+
+  get speedMultiplier(): number {
+    return this._speedMultiplier;
+  }
 
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize with current window size
@@ -99,8 +109,8 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
     this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
 
-    // Speed depends on cell
-    this.speed = 0.1 * this.cell;
+    // Speed
+    this.speed = this._speedMultiplier * 0.1 * this.cell;
   }
 
   ngOnInit() {
@@ -132,15 +142,15 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   update(p: p5) {
-    let rotationModifier = 1; // Forward
-    if (this.pressedKeys.has('s')) {
-      rotationModifier = -1; // Reverse
-      this.x -= this.speed * p.sin(this.theta);
-      this.y += this.speed * p.cos(this.theta);
-    }
+    let rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
+
     if (this.pressedKeys.has('w')) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
+    }
+    if (this.pressedKeys.has('s')) {
+      this.x -= this.speed * p.sin(this.theta);
+      this.y += this.speed * p.cos(this.theta);
     }
     if (this.pressedKeys.has('a')) {
       this.theta -= this.turnSpeed * rotationModifier;

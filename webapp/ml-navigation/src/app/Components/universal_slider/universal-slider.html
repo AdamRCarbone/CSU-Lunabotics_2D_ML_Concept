@@ -1,0 +1,22 @@
+<div class="slider-container" [class.vertical-container]="isVertical" [class.horizontal-container]="!isVertical" [style.height]="containerHeight">
+  @if (label) {
+    <label class="slider-pill" [style.color]="pillColor" [style.background]="pillBackground">{{ label }}</label>
+  }
+  <input
+    type="range"
+    [min]="min"
+    [max]="max"
+    [step]="step"
+    [(ngModel)]="value"
+    [class.vertical]="isVertical"
+    [class.horizontal]="!isVertical"
+    [style.--thumb-size]="thumbSizePx"
+    [style.--thumb-color]="thumbColor"
+    [style.--track-size]="trackSizePx"
+    [style.--track-color]="trackColor"
+    [style.--thumb-offset]="thumbOffset"
+  />
+  @if (showValue) {
+    <span class="slider-pill" [style.color]="pillColor" [style.background]="pillBackground">{{ value() }}</span>
+  }
+</div>

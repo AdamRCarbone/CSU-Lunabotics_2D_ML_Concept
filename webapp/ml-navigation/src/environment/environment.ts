@@ -1,5 +1,5 @@
 // src/app/environment/environment.component.ts
-import { Component, ElementRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect } from '@angular/core';
 import { RoverComponent } from '../app/Components/rover/rover';
 import { WindowSizeService } from '../app/services/window-size';
 import p5 from 'p5';
@@ -18,6 +18,12 @@ import { Subscription } from 'rxjs';
 export class EnvironmentComponent implements OnInit, OnDestroy {
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
+
+  @Input() set roverSpeedMultiplier(value: number) {
+    if (this.rover) {
+      this.rover.speedMultiplier = value;
+    }
+  }
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
