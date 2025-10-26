@@ -56,8 +56,8 @@ export class RoverComponent {
   
 
   //Rover State
-  private x: number = this.window_width / 2;
-  private y: number = this.window_height / 2;
+  private x: number = this.environment.rover_start_x - this.Rover_Origin_X;
+  private y: number = this.environment.rover_start_y - this.Rover_Origin_Y;
   private theta: number = 0; // Angle in degrees
   private speed: number = 0.1 * this.cell; // Pixels per frame
   private turnSpeed: number = 1; // Degrees per frame

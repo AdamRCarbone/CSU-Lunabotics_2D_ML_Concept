@@ -21,13 +21,15 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   private p5Instance!: p5;
   App = inject(App);
 
-
   public environment_width = this.App.window_width/1.5;
   public environment_height =this.App.window_width/1.5;
   public grid_size = 50;
   public cell_size = this.environment_height/this.grid_size
-  public environment_border_radius = this.cell_size/2.5;
-  public environment_stroke_weight = this.cell_size/2;
+  public environment_stroke_weight = this.App.window_width/150;
+  public environment_border_radius = this.App.window_width/100; 
+
+  public rover_start_x = this.environment_width / 8;
+  public rover_start_y = this.environment_height / 1.15;
 
   ngOnInit() {
     this.p5Instance = new p5((p: p5) => {
@@ -52,10 +54,9 @@ p.draw = () => {
     
     const rectW = this.environment_width - sw;
     const rectH = this.environment_height - sw;
-    const borderRadius = this.environment_border_radius * 5; 
     
     //adjusted rectangle
-    p.rect(rectX, rectY, rectW, rectH, borderRadius);
+    p.rect(rectX, rectY, rectW, rectH, this.environment_border_radius);
     
     this.rover.update(p); // Update rover
     this.rover.draw(p);   // Render rover
