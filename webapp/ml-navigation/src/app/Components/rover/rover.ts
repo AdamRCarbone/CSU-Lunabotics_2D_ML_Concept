@@ -69,8 +69,17 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     if (!isKeyOverride) {
       this._speedMultiplier = value;
-      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+      this.updateSpeed();
     }
+  }
+
+  private updateSpeed(): void {
+    this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+  }
+
+  private normalizeAngle(angle: number): number {
+    angle = angle % 360;
+    return angle < 0 ? angle + 360 : angle;
   }
 
   get speedMultiplier(): number {
@@ -132,8 +141,7 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
     this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
 
-    // Speed
-    this.speed = this._speedMultiplier * 0.1 * this.cell;
+    this.updateSpeed();
   }
 
   ngOnInit() {
@@ -165,14 +173,10 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   update(p: p5) {
-    let rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
-    const threshold = 0.1;
+    const rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
 
-    if (this._speedMultiplier > threshold) {
-      this.x += this.speed * p.sin(this.theta);
-      this.y -= this.speed * p.cos(this.theta);
-    }
-    if (this._speedMultiplier < -threshold) {
+    // Apply movement if above threshold
+    if (Math.abs(this._speedMultiplier) > 0.1) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
     }
@@ -180,42 +184,36 @@ export class RoverComponent implements OnInit, OnDestroy {
     // Keys override slider
     if (this.pressedKeys.has('w')) {
       this._speedMultiplier = 1;
-      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+      this.updateSpeed();
     } else if (this.pressedKeys.has('s')) {
       this._speedMultiplier = -1;
-      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+      this.updateSpeed();
     } else {
       this._speedMultiplier = this._targetSpeedFromSlider;
-      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+      this.updateSpeed();
     }
 
     // Keyboard rotation
-    let keyboardRotation = false;
+    const keyboardRotation = this.pressedKeys.has('a') || this.pressedKeys.has('d');
     if (this.pressedKeys.has('a')) {
       this.theta -= this.turnSpeed * rotationModifier;
       this.targetTheta = this.theta;
-      keyboardRotation = true;
     }
     if (this.pressedKeys.has('d')) {
       this.theta += this.turnSpeed * rotationModifier;
       this.targetTheta = this.theta;
-      keyboardRotation = true;
     }
 
     // Slider rotation
     if (!keyboardRotation) {
       const diff = this.targetTheta - this.theta;
       if (Math.abs(diff) > 0.1) {
-        const rotationStep = Math.min(Math.abs(diff), this.turnSpeed) * Math.sign(diff);
-        this.theta += rotationStep;
+        this.theta += Math.min(Math.abs(diff), this.turnSpeed) * Math.sign(diff);
       }
     }
 
-    // Normalize angles
-    this.theta = this.theta % 360;
-    if (this.theta < 0) this.theta += 360;
-    this.targetTheta = this.targetTheta % 360;
-    if (this.targetTheta < 0) this.targetTheta += 360;
+    this.theta = this.normalizeAngle(this.theta);
+    this.targetTheta = this.normalizeAngle(this.targetTheta);
   }
 
   draw(p: p5) {
