@@ -4,6 +4,7 @@ import { WindowSizeService } from '../../services/window-size';
 import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
 import p5 from 'p5';
+import { App } from '../../app';
 
 @Component({
   selector: 'app-rover',
@@ -14,6 +15,7 @@ import p5 from 'p5';
 export class RoverComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
   environment = inject(EnvironmentComponent);
+  App = inject(App);
 
   // Properties to be updated
   window_width!: number;
@@ -52,16 +54,30 @@ export class RoverComponent implements OnInit, OnDestroy {
   private theta: number = 0; // Current angle in degrees
   private targetTheta: number = 0; // Target angle from slider
   private speed!: number;
-  private _speedMultiplier: number = 1;
+  private _speedMultiplier: number = 0;
+  private _targetSpeedFromSlider: number = 0; // Speed target from slider
   private turnSpeed: number = .25; // Degrees per frame
   private pressedKeys = new Set<string>();
 
   set speedMultiplier(value: number) {
-    this._speedMultiplier = value;
-    this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+    const isKeyOverride = this.pressedKeys.has('w') || this.pressedKeys.has('s');
+    const isDisplayUpdate = Math.abs(value - this._speedMultiplier) < 0.01;
+
+    if (!isDisplayUpdate || !isKeyOverride) {
+      this._targetSpeedFromSlider = value;
+    }
+
+    if (!isKeyOverride) {
+      this._speedMultiplier = value;
+      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+    }
   }
 
   get speedMultiplier(): number {
+    return this._targetSpeedFromSlider;
+  }
+
+  get currentSpeed(): number {
     return this._speedMultiplier;
   }
 
@@ -74,10 +90,8 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   constructor(private windowSizeService: WindowSizeService) {
-    // Initialize with current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
     this.updateProperties(height);
-    // Set initial position using environment's rover_start_x and rover_start_y
     this.x = this.environment.rover_start_x - this.Rover_Origin_X;
     this.y = this.environment.rover_start_y - this.Rover_Origin_Y;
   }
@@ -152,18 +166,30 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   update(p: p5) {
     let rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
+    const threshold = 0.1;
 
-    // Handle movement
-    if (this.pressedKeys.has('w') || this._speedMultiplier > 0.1 || this._speedMultiplier < -0.1) {
+    if (this._speedMultiplier > threshold) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
     }
-    if (this.pressedKeys.has('s')) {
-      this.x -= this.speed * p.sin(this.theta);
-      this.y += this.speed * p.cos(this.theta);
+    if (this._speedMultiplier < -threshold) {
+      this.x += this.speed * p.sin(this.theta);
+      this.y -= this.speed * p.cos(this.theta);
     }
 
-    // Handle rotation from keyboard
+    // Keys override slider
+    if (this.pressedKeys.has('w')) {
+      this._speedMultiplier = 1;
+      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+    } else if (this.pressedKeys.has('s')) {
+      this._speedMultiplier = -1;
+      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+    } else {
+      this._speedMultiplier = this._targetSpeedFromSlider;
+      this.speed = this._speedMultiplier * 0.1 * 0.25 * this.cell;
+    }
+
+    // Keyboard rotation
     let keyboardRotation = false;
     if (this.pressedKeys.has('a')) {
       this.theta -= this.turnSpeed * rotationModifier;
@@ -176,7 +202,7 @@ export class RoverComponent implements OnInit, OnDestroy {
       keyboardRotation = true;
     }
 
-    // Handle rotation from slider (move towards target at limited turnSpeed)
+    // Slider rotation
     if (!keyboardRotation) {
       const diff = this.targetTheta - this.theta;
       if (Math.abs(diff) > 0.1) {
@@ -185,7 +211,7 @@ export class RoverComponent implements OnInit, OnDestroy {
       }
     }
 
-    // Normalize angle to 0-360 range
+    // Normalize angles
     this.theta = this.theta % 360;
     if (this.theta < 0) this.theta += 360;
     this.targetTheta = this.targetTheta % 360;

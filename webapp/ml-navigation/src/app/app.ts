@@ -1,5 +1,5 @@
 // src/app/app.component.ts
-import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef } from '@angular/core';
+import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
@@ -22,28 +22,33 @@ export class App implements AfterViewInit {
   public cell_size = this.window_height / this.grid_size;
   public speedValue: number = 0;
   public rotationValue: number = 0;
-  private lastRotationValue: number = 0;
 
   constructor(
     private windowSizeService: WindowSizeService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private ngZone: NgZone
   ) {
-    // Initial broadcast of window size
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 
   ngAfterViewInit() {
-    // Update rotation slider to reflect rover's current heading
-    setInterval(() => {
-      if (this.environment) {
-        const currentHeading = this.environment.roverCurrentHeading;
-        if (Math.abs(currentHeading - this.lastRotationValue) > 0.5) {
-          this.rotationValue = currentHeading;
-          this.lastRotationValue = currentHeading;
-          this.cdr.detectChanges();
+    this.ngZone.runOutsideAngular(() => {
+      setInterval(() => {
+        if (this.environment) {
+          this.ngZone.run(() => {
+            const newRotation = this.environment.roverCurrentHeading;
+            const newSpeed = this.environment.roverCurrentSpeed;
+
+            if (Math.abs(this.rotationValue - newRotation) > 0.01 ||
+                Math.abs(this.speedValue - newSpeed) > 0.01) {
+              this.rotationValue = newRotation;
+              this.speedValue = newSpeed;
+              this.cdr.markForCheck();
+            }
+          });
         }
-      }
-    }, 50); // Update every 50ms
+      }, 50);
+    });
   }
 
   @HostListener('window:resize', ['$event'])

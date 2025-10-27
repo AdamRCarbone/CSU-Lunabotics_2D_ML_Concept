@@ -34,6 +34,10 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   get roverCurrentHeading(): number {
     return this.rover ? this.rover.currentHeading : 0;
   }
+
+  get roverCurrentSpeed(): number {
+    return this.rover ? this.rover.currentSpeed : 0;
+  }
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
