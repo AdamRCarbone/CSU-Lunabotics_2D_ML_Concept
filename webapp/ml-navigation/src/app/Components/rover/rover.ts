@@ -101,8 +101,6 @@ export class RoverComponent implements OnInit, OnDestroy {
   constructor(private windowSizeService: WindowSizeService) {
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
     this.updateProperties(height);
-    this.x = this.environment.rover_start_x - this.Rover_Origin_X;
-    this.y = this.environment.rover_start_y - this.Rover_Origin_Y;
   }
 
   private updateProperties(windowHeight: number) {
@@ -145,6 +143,10 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Initialize rover position
+    this.x = this.environment.rover_start_x - this.Rover_Origin_X;
+    this.y = this.environment.rover_start_y - this.Rover_Origin_Y;
+
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
       // old dimensions and position

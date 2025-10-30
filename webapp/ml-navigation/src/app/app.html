@@ -31,7 +31,7 @@
 
 <main class="main">
   <div class="content">
-    <app-position-display></app-position-display>
+    <app-position-display [environment]="environment"></app-position-display>
     <app-environment
       [roverSpeedMultiplier]="speedValue"
       [roverTargetHeading]="rotationValue">

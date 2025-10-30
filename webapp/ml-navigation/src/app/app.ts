@@ -1,5 +1,5 @@
 // src/app/app.component.ts
-import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone } from '@angular/core';
+import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone, } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';

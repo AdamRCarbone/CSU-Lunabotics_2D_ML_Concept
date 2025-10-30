@@ -13,7 +13,7 @@ import { DecimalPipe } from '@angular/common';
   styleUrl: './position-display.css',
 })
 export class PositionDisplay {
-  @Input() environmentComponent!: EnvironmentComponent;
+  @Input() environment?: EnvironmentComponent;
 
   width!: number;
   height!: number;

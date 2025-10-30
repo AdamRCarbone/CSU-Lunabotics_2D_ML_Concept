@@ -4,13 +4,12 @@
 >
     <div style="font-weight:600; margin-bottom:6px;">Position</div>
 
-    <div *ngIf="environmentComponent?.rover; else noPosition">
-        <div>
-            x: {{ environmentComponent?.rover?.x | number:'1.0-2' }} &nbsp;
-            y: {{ environmentComponent?.rover?.y | number:'1.0-2' }}
-        </div>
-    </div>
-    <ng-template #noPosition>
-        <div style="color:#000000">x: — &nbsp; y: —</div>
-    </ng-template>
+     @if (environment?.rover?.x !== undefined) {
+      <div>
+          x: {{ environment?.rover?.x | number:'1.0-2' }} &nbsp;
+          y: {{ environment?.rover?.y | number:'1.0-2' }}
+      </div>
+  } @else {
+      <div style="color:#999;">x: — &nbsp; y: —</div>
+  }
 </div>
