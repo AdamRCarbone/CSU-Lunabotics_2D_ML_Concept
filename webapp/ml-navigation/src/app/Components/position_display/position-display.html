@@ -1,15 +1,15 @@
-<div
-    class="position-box"
-    style="display:inline-block; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:8px 12px; min-width:120px; box-shadow:0 1px 3px rgba(0,0,0,0.06); font-family:Inter, Roboto, Arial, sans-serif; font-size:13px; color:#111;"
->
-    <div style="font-weight:600; margin-bottom:6px;">Position</div>
+<div class="position-container">
+    <div class="title-pill" [style.color]="color" [style.background]="pillBackground">Position</div>
 
-     @if (environment?.rover?.x !== undefined) {
-      <div>
-          x: {{ environment?.rover?.x | number:'1.0-2' }} &nbsp;
-          y: {{ environment?.rover?.y | number:'1.0-2' }}
-      </div>
-  } @else {
-      <div style="color:#999;">x: — &nbsp; y: —</div>
-  }
+    @if (environment?.rover?.x !== undefined) {
+        <div class="coordinates">
+            <div>x: {{ environment?.rover?.x | number:'1.0-2' }}</div>
+            <div>y: {{ environment?.rover?.y | number:'1.0-2' }}</div>
+        </div>
+    } @else {
+        <div class="coordinates">
+            <div>x: —</div>
+            <div>y: —</div>
+        </div>
+    }
 </div>

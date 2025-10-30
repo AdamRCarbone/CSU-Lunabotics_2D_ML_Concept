@@ -1,8 +1,90 @@
+/* Material 3 Design Tokens */
+:root {
+  --md-sys-color-surface: #fff;
+  --md-sys-color-on-surface: #1c1b1f;
+  --md-sys-color-on-surface-variant: #49454f;
+  --md-sys-color-outline: #79747e;
+  --md-sys-color-outline-variant: #cac4d0;
+
+  /* Elevation shadows */
+  --md-sys-elevation-1: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 3px rgba(0, 0, 0, 0.15);
+  --md-sys-elevation-2: 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 2px rgba(0, 0, 0, 0.3);
+  --md-sys-elevation-3: 0 4px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.3);
+
+  /* Corner radius */
+  --md-sys-shape-corner-small: 0.5rem;
+  --md-sys-shape-corner-medium: 0.75rem;
+  --md-sys-shape-corner-large: 1rem;
+}
+
+/* Material 3 Surface Container */
+.md-surface {
+  background: var(--container-color, #fff);
+  border: 1px solid color-mix(in srgb, var(--container-color, #fff) 70%, black);
+  border-radius: var(--md-sys-shape-corner-medium);
+}
+
+.md-surface-elevated {
+  background: var(--md-sys-color-surface);
+  border-radius: var(--md-sys-shape-corner-medium);
+  box-shadow: var(--md-sys-elevation-2);
+}
+
+/* Material 3 Typography */
+.md-typescale-title-medium {
+  font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.5rem;
+  letter-spacing: 0.009375rem;
+  color: color-mix(in srgb, var(--container-color, #fff) 30%, black);
+}
+
+.md-typescale-body-medium {
+  font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.25rem;
+  letter-spacing: 0.015625rem;
+  color: var(--md-sys-color-on-surface);
+}
+
+.md-typescale-label-large {
+  font-family: 'Roboto', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25rem;
+  letter-spacing: 0.00625rem;
+  color: var(--md-sys-color-on-surface-variant);
+}
+
+/* Spacing utilities */
+.md-padding-small {
+  padding: 0.5rem 0.75rem;
+}
+
+.md-padding-medium {
+  padding: 0.75rem 1rem;
+}
+
+.md-padding-large {
+  padding: 1rem 1.25rem;
+}
+
+.md-gap-small {
+  gap: 0.5rem;
+}
+
+.md-gap-medium {
+  gap: 0.75rem;
+}
+
+/* Existing slider panel */
 .slider-panel {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px;
-  background: #ffffff00;
-  min-width: 100px;
+  padding: 1.5rem 1.25rem;
+  background: transparent;
+  min-width: 6.25rem;
 }
