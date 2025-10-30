@@ -4,12 +4,12 @@ import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
-import { PositionDisplay } from "./Components/position_display/position-display";
+import { ParameterDisplay, Parameter } from "./Components/parameter_display/parameter-display";
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, PositionDisplay],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -23,6 +23,10 @@ export class App implements AfterViewInit {
   public cell_size = this.window_height / this.grid_size;
   public speedValue: number = 0;
   public rotationValue: number = 0;
+  public positionParams: Parameter[] = [
+    { name: 'x', value: '—' },
+    { name: 'y', value: '—' }
+  ];
 
   constructor(
     private windowSizeService: WindowSizeService,
@@ -45,6 +49,14 @@ export class App implements AfterViewInit {
               this.rotationValue = newRotation;
               this.speedValue = newSpeed;
               this.cdr.markForCheck();
+            }
+
+            // Update position parameters
+            if (this.environment.rover) {
+              this.positionParams = [
+                { name: 'x', value: this.environment.rover.x.toFixed(2) },
+                { name: 'y', value: this.environment.rover.y.toFixed(2) }
+              ];
             }
           });
         }

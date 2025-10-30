@@ -31,7 +31,11 @@
 
 <main class="main">
   <div class="content">
-    <app-position-display [environment]="environment"></app-position-display>
+    <app-parameter-display
+      [header]="'Position'"
+      [parameters]="positionParams"
+      [color]="'#ff6b6b'">
+    </app-parameter-display>
     <app-environment
       [roverSpeedMultiplier]="speedValue"
       [roverTargetHeading]="rotationValue">
