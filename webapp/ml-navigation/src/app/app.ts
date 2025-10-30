@@ -4,11 +4,12 @@ import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
+import { PositionDisplay } from "./Components/position_display/position-display";
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, PositionDisplay],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })

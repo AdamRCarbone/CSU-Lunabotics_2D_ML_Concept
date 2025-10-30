@@ -49,8 +49,8 @@ export class RoverComponent implements OnInit, OnDestroy {
   Bucket_Arm_Y!: number;
 
   // Rover State
-  private x!: number;
-  private y!: number;
+  public x!: number;
+  public y!: number;
   private theta: number = 0; // Current angle in degrees
   private targetTheta: number = 0; // Target angle from slider
   private speed!: number;

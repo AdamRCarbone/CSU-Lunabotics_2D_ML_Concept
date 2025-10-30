@@ -1,5 +1,5 @@
 // src/app/environment/environment.component.ts
-import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect, forwardRef } from '@angular/core';
 import { RoverComponent } from '../app/Components/rover/rover';
 import { WindowSizeService } from '../app/services/window-size';
 import p5 from 'p5';
@@ -16,6 +16,19 @@ import { Subscription } from 'rxjs';
   styleUrls: ['./environment.css']
 })
 export class EnvironmentComponent implements OnInit, OnDestroy {
+  private p5Instance!: p5;
+  private windowSizeSubscription!: Subscription;
+
+  public environment_width: number;
+  public environment_height: number;
+  public grid_size = 50;
+  public cell_size: number;
+  public environment_border_radius: number;
+  public environment_stroke_weight: number;
+  public rover_start_x: number;
+  public rover_start_y: number;
+
+
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
 
@@ -38,17 +51,6 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   get roverCurrentSpeed(): number {
     return this.rover ? this.rover.currentSpeed : 0;
   }
-  private p5Instance!: p5;
-  private windowSizeSubscription!: Subscription;
-
-  public environment_width: number;
-  public environment_height: number;
-  public grid_size = 50;
-  public cell_size: number;
-  public environment_border_radius: number;
-  public environment_stroke_weight: number;
-  public rover_start_x: number;
-  public rover_start_y: number;
 
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize with current window size
@@ -70,6 +72,10 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.cell_size = this.environment_height / this.grid_size;
       this.environment_border_radius = this.cell_size / 2.5;
       this.environment_stroke_weight = this.cell_size / 2;
+
+      // Reset rover position
+      this.rover.x = this.rover_start_x;
+      this.rover.y = this.rover_start_y;
 
       // Resize the p5.js canvas
       if (this.p5Instance) {

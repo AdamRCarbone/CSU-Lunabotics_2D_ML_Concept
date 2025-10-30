@@ -1,0 +1,16 @@
+<div
+    class="position-box"
+    style="display:inline-block; background:#fff; border:1px solid rgba(0,0,0,0.08); border-radius:8px; padding:8px 12px; min-width:120px; box-shadow:0 1px 3px rgba(0,0,0,0.06); font-family:Inter, Roboto, Arial, sans-serif; font-size:13px; color:#111;"
+>
+    <div style="font-weight:600; margin-bottom:6px;">Position</div>
+
+    <div *ngIf="environmentComponent?.rover; else noPosition">
+        <div>
+            x: {{ environmentComponent?.rover?.x | number:'1.0-2' }} &nbsp;
+            y: {{ environmentComponent?.rover?.y | number:'1.0-2' }}
+        </div>
+    </div>
+    <ng-template #noPosition>
+        <div style="color:#000000">x: — &nbsp; y: —</div>
+    </ng-template>
+</div>
