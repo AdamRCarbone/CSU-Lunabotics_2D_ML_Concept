@@ -6,3 +6,8 @@
   background: #ffffff00;
   min-width: 100px;
 }
+
+.position-display {
+  align-self: flex-start;
+  margin-left: 3.5rem;
+}

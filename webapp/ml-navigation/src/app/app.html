@@ -31,11 +31,6 @@
 
 <main class="main">
   <div class="content">
-    <app-parameter-display
-      [header]="'Position'"
-      [parameters]="positionParams"
-      [color]="'#ff6b6b'">
-    </app-parameter-display>
     <app-environment
       [roverSpeedMultiplier]="speedValue"
       [roverTargetHeading]="rotationValue">
@@ -65,6 +60,11 @@
         [showValue]="true"
         color="#7DDA58">
       </app-universal-slider>
+      <app-parameter-display class = "position-display"
+      [header]="'Position'"
+      [parameters]="positionParams"
+      [color]="'#6eb9ff'">
+    </app-parameter-display>
     </div>
   </div>
 </main>
