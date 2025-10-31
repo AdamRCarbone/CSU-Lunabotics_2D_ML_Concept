@@ -36,7 +36,16 @@ export class App implements AfterViewInit {
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 
+  updateRoverPosition() {
+    this.positionParams = [
+      { name: 'x', value: this.environment.rover.x.toFixed(2) },
+      { name: 'y', value: this.environment.rover.y.toFixed(2) }
+    ];
+  }
+
   ngAfterViewInit() {
+    this.updateRoverPosition();
+    
     this.ngZone.runOutsideAngular(() => {
       setInterval(() => {
         if (this.environment) {
@@ -53,10 +62,7 @@ export class App implements AfterViewInit {
 
             // Update position parameters
             if (this.environment.rover) {
-              this.positionParams = [
-                { name: 'x', value: this.environment.rover.x.toFixed(2) },
-                { name: 'y', value: this.environment.rover.y.toFixed(2) }
-              ];
+              this.updateRoverPosition();
             }
           });
         }
