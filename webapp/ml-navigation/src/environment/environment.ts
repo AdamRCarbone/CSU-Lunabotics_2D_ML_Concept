@@ -94,16 +94,21 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
       this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
-      // Resize the p5.js canvas
+      // Resize the p5.js canvas (add extra space for stroke)
       if (this.p5Instance) {
-        this.p5Instance.resizeCanvas(this.environment_width_px, this.environment_height_px);
+        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
+        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
+        this.p5Instance.resizeCanvas(canvasWidth, canvasHeight);
       }
     });
 
     // Initialize p5.js
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
-        const canvas = p.createCanvas(this.environment_width_px, this.environment_height_px);
+        // Add extra space for stroke to prevent clipping
+        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
+        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
+        const canvas = p.createCanvas(canvasWidth, canvasHeight);
         canvas.parent(this.canvasContainer.nativeElement);
         p.angleMode(p.DEGREES);
       };
