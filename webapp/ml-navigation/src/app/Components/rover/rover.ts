@@ -133,13 +133,13 @@ export class RoverComponent implements OnInit, OnDestroy {
 }
 
   private updateProperties(windowHeight: number) {
-    // scaling using environment dimensions 
+    // scaling using environment dimensions
     this.window_width = this.environment.environment_width_px;
     this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
-    const metersToPixels = this.environment.environment_height_px / this.environment.environment_height_meters;
-    this.Rover_Height = this.environment.rover_length_meters/2 * metersToPixels;
+    // Use centralized conversion function
+    this.Rover_Height = this.environment.metersToPixels(this.environment.rover_length_meters / 2);
 
     // 3:5 width:height ratio
     this.Rover_Width = this.Rover_Height * 0.6;

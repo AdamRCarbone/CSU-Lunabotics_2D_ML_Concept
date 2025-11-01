@@ -30,9 +30,9 @@ export class ZoneDisplay {
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
-      this.startingZone_width_px = (this.environment.environment_width_px/this.environment.environment_width_meters)*this.startingZone_width_meters
-      this.startingZone_height_px = (this.environment.environment_height_px/this.environment.environment_height_meters)*this.startingZone_height_meters
-
+      // Use centralized conversion function
+      this.startingZone_width_px = this.environment.metersToPixels(this.startingZone_width_meters);
+      this.startingZone_height_px = this.environment.metersToPixels(this.startingZone_height_meters);
     });
   }
 
@@ -47,25 +47,18 @@ export class ZoneDisplay {
 
     p.push();
 
-    p.stroke(r,g,b,255)
-    p.fill(r,g,b,25); // Don't fill the zone rectangle, just draw the outline
+    p.stroke(r, g, b, 255);
+    p.fill(r, g, b, 25);
 
     const sw = this.environment.environment_stroke_weight_px;
-    p.strokeWeight(sw/2);
-    const strokeOffset = sw;
+    p.strokeWeight(sw / 2);
+    const strokeOffset = sw / 2;
 
-    const rectX = strokeOffset;
-    const rectY = strokeOffset;
+    // Position zone in bottom-left corner
+    const y_pos = this.environment.environment_height_px - this.startingZone_height_px;
 
-    const rectW = this.startingZone_width_px - sw;
-    const rectH = this.startingZone_height_px - sw;
-    const borderRadius = this.environment.environment_border_radius_px;
-
-    const y_pos = this.environment.environment_height_px - rectH - 2*strokeOffset;
-    p.translate(0, y_pos)
-
-    // Adjusted rectangle
-    p.rect(rectX, rectY, rectW, rectH, borderRadius);
+    // Draw at exact dimensions - stroke will extend outside (centered on edge)
+    p.rect(strokeOffset, strokeOffset + y_pos, this.startingZone_width_px, this.startingZone_height_px, this.environment.environment_border_radius_px);
 
     p.pop();
   }
