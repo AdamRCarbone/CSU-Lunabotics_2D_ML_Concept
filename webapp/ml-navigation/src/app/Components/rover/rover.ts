@@ -5,6 +5,8 @@ import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
 import p5 from 'p5';
 import { App } from '../../app';
+import { ResetTrigger } from '../../services/reset-trigger';
+import { RoverCollisionDetector } from './rover_reset';
 
 @Component({
   selector: 'app-rover',
@@ -14,8 +16,11 @@ import { App } from '../../app';
 })
 export class RoverComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
+  private resetSubscription!: Subscription;
+  private collisionDetector!: RoverCollisionDetector;
   environment = inject(EnvironmentComponent);
   App = inject(App);
+  ResetTrigger = inject(ResetTrigger);
 
   // Properties
   window_width!: number;
@@ -163,6 +168,9 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
     this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
 
+    // Initialize collision detector
+    this.collisionDetector = new RoverCollisionDetector(this.ResetTrigger, this.environment);
+
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
       // old dimensions and position
@@ -182,11 +190,34 @@ export class RoverComponent implements OnInit, OnDestroy {
         this.y = oldY * heightRatio;
       }
     });
+
+    // Subscribe to reset trigger
+    this.resetSubscription = this.ResetTrigger.reset$.subscribe(() => {
+      this.resetRoverPosition();
+    });
+  }
+
+  private resetRoverPosition() {
+    // Reset position to start position
+    this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
+    this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
+
+    // Reset rotation
+    this.theta = 0;
+    this.targetTheta = 0;
+
+    // Reset speed
+    this._speedMultiplier = 0;
+    this._targetSpeedFromSlider = 0;
+    this.updateSpeed();
   }
 
   ngOnDestroy() {
     if (this.windowSizeSubscription) {
       this.windowSizeSubscription.unsubscribe();
+    }
+    if (this.resetSubscription) {
+      this.resetSubscription.unsubscribe();
     }
   }
 
@@ -232,6 +263,9 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
+
+    // Check for collisions
+    this.collisionDetector.checkCollisions(this.x, this.y, this.Rover_Width, this.Rover_Height);
   }
 
   draw(p: p5) {
