@@ -22,8 +22,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   // ===== REAL-WORLD UNITS (METERS) =====
   public environment_width_meters: number = 6.8;
   public environment_height_meters: number = 5;
-  public rover_start_x_meters: number = 0.5; // meters from left edge (0 to 6.8)
-  public rover_start_y_meters: number = 0.5; // meters from bottom edge (0 to 5)
+  public rover_start_x_meters: number = 0.5; // meters from left edge
+  public rover_start_y_meters: number = 0.5; // meters from bottom edge
   public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)
 
   // ===== PIXEL-BASED PROPERTIES (FOR RENDERING) =====
@@ -64,7 +64,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   }
 
   constructor(private windowSizeService: WindowSizeService) {
-    // Initialize with current window size
+    // Initialize using current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
 
     // Calculate pixel dimensions from meters
@@ -74,7 +74,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.environment_border_radius_px = this.cell_size_px;
     this.environment_stroke_weight_px = this.cell_size_px / 2;
 
-    // Convert meter-based starting position to pixel coordinates
+    // Convert meter starting pos to pixel coordinates
     this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
     this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
   }
@@ -105,7 +105,6 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     // Initialize p5.js
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
-        // Add extra space for stroke to prevent clipping
         const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
         const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
         const canvas = p.createCanvas(canvasWidth, canvasHeight);

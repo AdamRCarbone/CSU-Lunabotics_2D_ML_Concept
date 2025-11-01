@@ -17,10 +17,10 @@ export class RoverComponent implements OnInit, OnDestroy {
   environment = inject(EnvironmentComponent);
   App = inject(App);
 
-  // Properties to be updated
+  // Properties
   window_width!: number;
   window_height!: number;
-  grid_size: number = 50; // Match EnvironmentComponent
+  grid_size: number = this.environment.grid_size;
   cell!: number;
   Rover_Stroke_Thickness!: number;
   Rover_Stroke_Color: number = 20;
@@ -51,13 +51,14 @@ export class RoverComponent implements OnInit, OnDestroy {
   // Rover State
   public x!: number;
   public y!: number;
-  private theta: number = 0; // Current angle in degrees
-  private targetTheta: number = 0; // Target angle from slider
+  private theta: number = 0; // Current angle (degrees)
+  private targetTheta: number = 0; // Target angle (from slider input)
   private speed!: number;
   private _speedMultiplier: number = 0;
-  private _targetSpeedFromSlider: number = 0; // Speed target from slider
+  private _targetSpeedFromSlider: number = 0; // Speed target (from slider input)
   private turnSpeed: number = .25; // Degrees per frame
   private pressedKeys = new Set<string>();
+  private speedThreshold: number = 0.1;
 
   set speedMultiplier(value: number) {
     const isKeyOverride = this.pressedKeys.has('w') || this.pressedKeys.has('s');
@@ -98,7 +99,7 @@ export class RoverComponent implements OnInit, OnDestroy {
     return this.theta;
   }
 
-  // Center position (accounting for rover origin offset)
+  // Center position (using rover origin offset)
   get centerX(): number {
     return this.x + this.Rover_Origin_X;
   }
@@ -113,20 +114,19 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   private updateProperties(windowHeight: number) {
-    // Use environment's actual dimensions for scaling
+    // Use environment's dimensions for scaling
     this.window_width = this.environment.environment_width_px;
     this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
-    // Calculate rover dimensions from rover_length_meters
-    // Convert rover length from meters to pixels
+    // Calculate rover dimensions from rover_length_meters and meters to pixels
     const metersToPixels = this.environment.environment_height_px / this.environment.environment_height_meters;
     this.Rover_Height = this.environment.rover_length_meters/2 * metersToPixels;
 
-    // Maintain 3:5 width:height ratio (width = height * 0.6)
+    // 3:5 width:height ratio
     this.Rover_Width = this.Rover_Height * 0.6;
 
-    // Scale other properties proportionally to rover height
+    // Scale other properties proportionally
     const heightScale = this.Rover_Height / 5; // Base scale factor (original was 5 cells)
     this.Rover_Stroke_Thickness = 0.25 * heightScale;
     this.Rover_Radius = 0.5 * heightScale;
@@ -194,7 +194,7 @@ export class RoverComponent implements OnInit, OnDestroy {
     const rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
 
     // Apply movement if above threshold
-    if (Math.abs(this._speedMultiplier) > 0.1) {
+    if (Math.abs(this._speedMultiplier) > this.speedThreshold) {
       this.x += this.speed * p.sin(this.theta);
       this.y -= this.speed * p.cos(this.theta);
     }
@@ -237,7 +237,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   draw(p: p5) {
     p.push();
     p.translate(this.x + this.Rover_Origin_X, this.y + this.Rover_Origin_Y); // Center of rover
-    p.rotate(this.theta); // Make sure p.angleMode(p.DEGREES) is set in your sketch!
+    p.rotate(this.theta); //p.angleMode(p.DEGREES) must be set in sketch
 
     // Rover Body
     p.fill(100, 100, 100);
