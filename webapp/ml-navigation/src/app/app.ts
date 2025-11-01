@@ -37,10 +37,10 @@ export class App implements AfterViewInit {
   }
 
   scaleRoverPosition(Axis: string, Coordinate: number): string {
-    const environment_height = this.environment.environment_height;
-    const environment_width = this.environment.environment_width;
-    const x_width_meters = this.environment.environment_x_width;
-    const y_height_meters = this.environment.environment_y_height;
+    const environment_height = this.environment.environment_height_px;
+    const environment_width = this.environment.environment_width_px;
+    const x_width_meters = this.environment.environment_width_meters;
+    const y_height_meters = this.environment.environment_height_meters;
 
     let scaledCoordinate: number;
 

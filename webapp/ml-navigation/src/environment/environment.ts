@@ -19,21 +19,24 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
-  public environment_width: number;
-  public environment_height: number;
-  public grid_size = 50;
-  public cell_size: number;
-  public environment_border_radius: number;
-  public environment_stroke_weight: number;
-  public rover_start_x: number;
-  public rover_start_y: number;
-  public environment_x_width: number = 6.8; //meters
-  public environment_y_height: number = 5; //meters
-  public xy_scale_factor: number = 10;
+  // ===== REAL-WORLD UNITS (METERS) =====
+  public environment_width_meters: number = 6.8;
+  public environment_height_meters: number = 5;
+  public rover_start_x_meters: number = 0.5; // meters from left edge (0 to 6.8)
+  public rover_start_y_meters: number = 0.5; // meters from bottom edge (0 to 5)
 
-  // Starting position in meters (0,0 is bottom-left, max is top-right)
-  public rover_start_x_meters: number = 0.5; // meters from left edge
-  public rover_start_y_meters: number = 0.5; // meters from bottom edge
+  // ===== PIXEL-BASED PROPERTIES (FOR RENDERING) =====
+  public environment_width_px!: number;
+  public environment_height_px!: number;
+  public cell_size_px!: number;
+  public environment_border_radius_px!: number;
+  public environment_stroke_weight_px!: number;
+  public rover_start_x_px!: number;
+  public rover_start_y_px!: number;
+
+  // ===== GRID & SCALING =====
+  public grid_size = 50; // Grid divisions for visualization
+  public xy_scale_factor: number = 10; // Window height scaling factor
 
 
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
@@ -62,45 +65,48 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize with current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
-    this.environment_width = height * this.environment_x_width / this.xy_scale_factor;
-    this.environment_height = height * this.environment_y_height / this.xy_scale_factor;
-    this.cell_size = this.environment_height / this.grid_size;
-    this.environment_border_radius = this.cell_size / 2.5;
-    this.environment_stroke_weight = this.cell_size / 2;
+
+    // Calculate pixel dimensions from meters
+    this.environment_width_px = height * this.environment_width_meters / this.xy_scale_factor;
+    this.environment_height_px = height * this.environment_height_meters / this.xy_scale_factor;
+    this.cell_size_px = this.environment_height_px / this.grid_size;
+    this.environment_border_radius_px = this.cell_size_px;
+    this.environment_stroke_weight_px = this.cell_size_px / 2;
 
     // Convert meter-based starting position to pixel coordinates
-    this.rover_start_x = (this.rover_start_x_meters / this.environment_x_width) * this.environment_width;
-    this.rover_start_y = this.environment_height - ((this.rover_start_y_meters / this.environment_y_height) * this.environment_height);
+    this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+    this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
   }
 
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
 
-      this.environment_width = height * this.environment_x_width / this.xy_scale_factor;
-      this.environment_height = height * this.environment_y_height / this.xy_scale_factor;
-      this.cell_size = this.environment_height / this.grid_size;
-      this.environment_border_radius = this.cell_size / 2.5;
-      this.environment_stroke_weight = this.cell_size / 2;
+      // Calculate pixel dimensions from meters
+      this.environment_width_px = height * this.environment_width_meters / this.xy_scale_factor;
+      this.environment_height_px = height * this.environment_height_meters / this.xy_scale_factor;
+      this.cell_size_px = this.environment_height_px / this.grid_size;
+      this.environment_border_radius_px = this.cell_size_px;
+      this.environment_stroke_weight_px = this.cell_size_px / 2;
 
       // Convert meter-based starting position to pixel coordinates
-      this.rover_start_x = (this.rover_start_x_meters / this.environment_x_width) * this.environment_width;
-      this.rover_start_y = this.environment_height - ((this.rover_start_y_meters / this.environment_y_height) * this.environment_height);
+      this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+      this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
       // Reset rover position
-      this.rover.x = this.rover_start_x;
-      this.rover.y = this.rover_start_y;
+      this.rover.x = this.rover_start_x_px;
+      this.rover.y = this.rover_start_y_px;
 
       // Resize the p5.js canvas
       if (this.p5Instance) {
-        this.p5Instance.resizeCanvas(this.environment_width, this.environment_height);
+        this.p5Instance.resizeCanvas(this.environment_width_px, this.environment_height_px);
       }
     });
 
     // Initialize p5.js
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
-        const canvas = p.createCanvas(this.environment_width, this.environment_height);
+        const canvas = p.createCanvas(this.environment_width_px, this.environment_height_px);
         canvas.parent(this.canvasContainer.nativeElement);
         p.angleMode(p.DEGREES);
       };
@@ -109,16 +115,16 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         p.fill(220);
         p.stroke(150);
 
-        const sw = this.environment_stroke_weight;
+        const sw = this.environment_stroke_weight_px;
         p.strokeWeight(sw);
         const strokeOffset = sw / 2;
 
         const rectX = strokeOffset;
         const rectY = strokeOffset;
 
-        const rectW = this.environment_width - sw;
-        const rectH = this.environment_height - sw;
-        const borderRadius = this.environment_border_radius * 5;
+        const rectW = this.environment_width_px - sw;
+        const rectH = this.environment_height_px - sw;
+        const borderRadius = this.environment_border_radius_px;
 
         // Adjusted rectangle
         p.rect(rectX, rectY, rectW, rectH, borderRadius);

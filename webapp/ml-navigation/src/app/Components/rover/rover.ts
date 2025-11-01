@@ -153,8 +153,8 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   ngOnInit() {
     // Initialize rover position
-    this.x = this.environment.rover_start_x - this.Rover_Origin_X;
-    this.y = this.environment.rover_start_y - this.Rover_Origin_Y;
+    this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
+    this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
 
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
