@@ -53,6 +53,15 @@ export class RoverComponent implements OnInit, OnDestroy {
   Bucket_Arm_Right_X!: number;
   Bucket_Arm_Y!: number;
 
+  // Bounding Box (encompasses all visual elements)
+  BoundingBox_Left!: number;   // Distance from center to left edge
+  BoundingBox_Right!: number;  // Distance from center to right edge
+  BoundingBox_Top!: number;    // Distance from center to top edge
+  BoundingBox_Bottom!: number; // Distance from center to bottom edge
+  BoundingBox_OffsetX!: number; // X offset from rover center to bounding box center
+  BoundingBox_OffsetY!: number; // Y offset from rover center to bounding box center
+  public showBoundingBox: boolean = true; // Toggle bounding box
+
   // Rover State
   public x!: number;
   public y!: number;
@@ -160,7 +169,46 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
     this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
 
+    // Calculate bounding box that encompasses all visual elements
+    this.calculateBoundingBox();
+
     this.updateSpeed();
+  }
+
+  private calculateBoundingBox() {
+    // Collect all edges to find extremes
+    const allX = [
+      -this.Rover_Width / 2, this.Rover_Width / 2,
+      this.Wheel_Left_X, this.Wheel_Left_X + this.Wheel_Width,
+      this.Wheel_Right_X, this.Wheel_Right_X + this.Wheel_Width,
+      this.Bucket_X, this.Bucket_X + this.Bucket_Width,
+      this.Bucket_Arm_Left_X, this.Bucket_Arm_Left_X + this.Bucket_Arm_Width,
+      this.Bucket_Arm_Right_X, this.Bucket_Arm_Right_X + this.Bucket_Arm_Width
+    ];
+
+    const allY = [
+      -this.Rover_Height / 2, this.Rover_Height / 2,
+      this.Wheel_Front_Y, this.Wheel_Back_Y + this.Wheel_Height,
+      this.Bucket_Y, this.Bucket_Y + this.Bucket_Height,
+      this.Bucket_Arm_Y, this.Bucket_Arm_Y + this.Bucket_Arm_Height
+    ];
+
+    const minX = Math.min(...allX);
+    const maxX = Math.max(...allX);
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...allY);
+
+    // Calculate offset and half-extents
+    this.BoundingBox_OffsetX = (minX + maxX) / 2;
+    this.BoundingBox_OffsetY = (minY + maxY) / 2;
+
+    const halfWidth = (maxX - minX) / 2;
+    const halfHeight = (maxY - minY) / 2;
+
+    this.BoundingBox_Left = halfWidth;
+    this.BoundingBox_Right = halfWidth;
+    this.BoundingBox_Top = halfHeight;
+    this.BoundingBox_Bottom = halfHeight;
   }
 
   ngOnInit() {
@@ -264,8 +312,19 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
 
-    // Check for collisions
-    this.collisionDetector.checkCollisions(this.x, this.y, this.Rover_Width, this.Rover_Height);
+    // Check for collisions using bounding box
+    // Pass the bounding box center position (rover center + offset)
+    this.collisionDetector.checkCollisions(
+      this.centerX,
+      this.centerY,
+      this.BoundingBox_OffsetX,
+      this.BoundingBox_OffsetY,
+      this.BoundingBox_Left,
+      this.BoundingBox_Right,
+      this.BoundingBox_Top,
+      this.BoundingBox_Bottom,
+      this.theta
+    );
   }
 
   draw(p: p5) {
@@ -297,6 +356,19 @@ export class RoverComponent implements OnInit, OnDestroy {
     p.rect(this.Bucket_Arm_Left_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
+
+    // Draw bounding box if enabled (for debugging)
+    if (this.showBoundingBox) {
+      p.stroke(255, 0, 0); // Red color
+      p.strokeWeight(2);
+      p.noFill();
+      p.rectMode(p.CENTER);
+      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
+      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
+      // Draw at offset position (bounding box center is offset from rover body center)
+      p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
+      p.rectMode(p.CORNER); // Reset to default
+    }
 
     p.pop();
   }

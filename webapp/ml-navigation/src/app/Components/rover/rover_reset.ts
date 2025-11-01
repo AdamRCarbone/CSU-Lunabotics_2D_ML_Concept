@@ -9,29 +9,38 @@ export class RoverCollisionDetector {
   ) {}
 
   //Check if rover collided with environment bounds
-  checkCollisions(roverX: number, roverY: number, roverWidth: number, roverHeight: number): void {
+  checkCollisions(
+    roverCenterX: number,
+    roverCenterY: number,
+    boxOffsetX: number,
+    boxOffsetY: number,
+    boundLeft: number,
+    boundRight: number,
+    boundTop: number,
+    boundBottom: number,
+    rotation: number
+  ): void {
     // Check environment boundary collisions
-    if (this.checkEnvironmentBoundary(roverX, roverY, roverWidth, roverHeight)) {
+    if (this.checkEnvironmentBoundary(roverCenterX, roverCenterY, boxOffsetX, boxOffsetY, boundLeft, boundRight, boundTop, boundBottom, rotation)) {
       this.resetTrigger.triggerReset();
     }
   }
 
-  //Check if rover is touching or outside environment boundaries
+  //Check if rover bounding box (with rotation) is touching or outside environment boundaries
   private checkEnvironmentBoundary(
-    roverX: number,
-    roverY: number,
-    roverWidth: number,
-    roverHeight: number
+    roverCenterX: number,
+    roverCenterY: number,
+    boxOffsetX: number,
+    boxOffsetY: number,
+    boundLeft: number,
+    boundRight: number,
+    boundTop: number,
+    boundBottom: number,
+    rotation: number
   ): boolean {
     const envWidth = this.environment.environment_width_px;
     const envHeight = this.environment.environment_height_px;
     const strokeWeight = this.environment.environment_stroke_weight_px;
-
-    // Calculate rover bounds (accounting for origin being at top-left of rover)
-    const roverLeft = roverX;
-    const roverRight = roverX + roverWidth;
-    const roverTop = roverY;
-    const roverBottom = roverY + roverHeight;
 
     // Environment boundaries (accounting for stroke)
     const envLeft = strokeWeight / 2;
@@ -39,13 +48,43 @@ export class RoverCollisionDetector {
     const envTop = strokeWeight / 2;
     const envBottom = envHeight - strokeWeight / 2;
 
-    // Check if rover is outside or touching boundaries
-    return (
-      roverLeft <= envLeft ||
-      roverRight >= envRight ||
-      roverTop <= envTop ||
-      roverBottom >= envBottom
-    );
+    // Rotate the offset to account for rover rotation
+    const rotRad = (rotation * Math.PI) / 180;
+    const cosR = Math.cos(rotRad);
+    const sinR = Math.sin(rotRad);
+
+    const rotatedOffsetX = boxOffsetX * cosR - boxOffsetY * sinR;
+    const rotatedOffsetY = boxOffsetX * sinR + boxOffsetY * cosR;
+
+    // Calculate bounding box center in world coordinates
+    const boxCenterX = roverCenterX + rotatedOffsetX;
+    const boxCenterY = roverCenterY + rotatedOffsetY;
+
+    // Calculate 4 corners of bounding box relative to box center
+    const corners = [
+      { x: -boundLeft, y: -boundTop },      // Top-left
+      { x: boundRight, y: -boundTop },      // Top-right
+      { x: boundRight, y: boundBottom },    // Bottom-right
+      { x: -boundLeft, y: boundBottom }     // Bottom-left
+    ];
+
+    // Rotate and translate corners to world coordinates
+    for (const corner of corners) {
+      // Rotate corner
+      const rotatedX = corner.x * cosR - corner.y * sinR;
+      const rotatedY = corner.x * sinR + corner.y * cosR;
+
+      // Translate to world position
+      const worldX = boxCenterX + rotatedX;
+      const worldY = boxCenterY + rotatedY;
+
+      // Check if corner is outside environment
+      if (worldX <= envLeft || worldX >= envRight || worldY <= envTop || worldY >= envBottom) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Add more collision detection methods here as needed:
