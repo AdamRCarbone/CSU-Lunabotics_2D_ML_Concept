@@ -1,9 +1,9 @@
 import { Component, inject } from '@angular/core';
-import { RoverComponent } from '../../../app/Components/rover/rover';
 import p5, { Color } from 'p5';
 import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
 import { WindowSizeService } from '../../../app/services/window-size';
+import { App } from '../../app';
 
 
 @Component({
@@ -14,7 +14,8 @@ import { WindowSizeService } from '../../../app/services/window-size';
 })
 export class ZoneDisplay {
   environment = inject(EnvironmentComponent);
-  windowSizeService = inject(WindowSizeService)
+  windowSizeService = inject(WindowSizeService);
+  app = inject(App);
 
   //2x2m region in bottom left of environment
   private p5Instance!: p5;
@@ -24,6 +25,7 @@ export class ZoneDisplay {
   public startingZone_height_meters: number = 2;
   public startingZone_width_px!: number;
   public startingZone_height_px!: number;
+  public startingZone_color: string = '#69D140';
 
   ngOnInit() {
     // Subscribe to window size changes
@@ -37,23 +39,33 @@ export class ZoneDisplay {
   update(p: p5) {}
 
   draw(p: p5) {
+    const color = this.startingZone_color;
+    const rgb = this.app.hexToRgb(color) ?? { r: 0, g: 0, b: 0 };
+    const r = rgb.r;
+    const g = rgb.g;
+    const b = rgb.b;
+
     p.push();
 
-    p.stroke(175, 254, 144)
+    p.stroke(r,g,b,255)
+    p.fill(r,g,b,25); // Don't fill the zone rectangle, just draw the outline
 
     const sw = this.environment.environment_stroke_weight_px;
-    p.strokeWeight(sw);
-    const strokeOffset = sw / 2;
+    p.strokeWeight(sw/2);
+    const strokeOffset = sw;
 
     const rectX = strokeOffset;
     const rectY = strokeOffset;
 
-    const rectW = this.environment.environment_width_px - sw;
-    const rectH = this.environment.environment_height_px - sw;
+    const rectW = this.startingZone_width_px - sw;
+    const rectH = this.startingZone_height_px - sw;
     const borderRadius = this.environment.environment_border_radius_px;
 
+    const y_pos = this.environment.environment_height_px - rectH - 2*strokeOffset;
+    p.translate(0, y_pos)
+
     // Adjusted rectangle
-    p.rect(rectX/2, rectY/2, rectW/2, rectH/2, borderRadius);
+    p.rect(rectX, rectY, rectW, rectH, borderRadius);
 
     p.pop();
   }

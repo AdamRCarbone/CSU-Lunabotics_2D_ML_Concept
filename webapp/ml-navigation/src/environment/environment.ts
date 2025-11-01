@@ -9,11 +9,11 @@ import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 @Component({
   selector: 'app-environment',
   standalone: true,
-  imports: [RoverComponent],
+  imports: [RoverComponent, ZoneDisplay],
   template: `
     <div #canvasContainer></div>
     <app-rover #rover></app-rover>
-    <div #zoneDisplay></div>
+    <app-zone-display #zoneDisplay></app-zone-display>
   `,
   styleUrls: ['./environment.css']
 })

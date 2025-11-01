@@ -93,6 +93,23 @@ export class App implements AfterViewInit {
     });
   }
 
+  hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+  // Remove the leading # if present
+  hex = hex.replace(/^#/, '');
+
+  // Check if it's a valid 6-character hex string
+  if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
+    return null; // Invalid hex, return null or throw an error as needed
+  }
+
+  // Parse the r, g, b components
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+
+  return { r, g, b };
+}
+
   @HostListener('window:resize', ['$event'])
   onResize(event: Event) {
     this.window_width = window.innerWidth;
