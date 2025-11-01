@@ -237,7 +237,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   draw(p: p5) {
     p.push();
     p.translate(this.x + this.Rover_Origin_X, this.y + this.Rover_Origin_Y); // Center of rover
-    p.rotate(this.theta); //p.angleMode(p.DEGREES) must be set in sketch
+    p.rotate(this.theta); //p.angleMode(p.DEGREES) must set in sketch
 
     // Rover Body
     p.fill(100, 100, 100);
