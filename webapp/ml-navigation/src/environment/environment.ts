@@ -4,6 +4,7 @@ import { RoverComponent } from '../app/Components/rover/rover';
 import { WindowSizeService } from '../app/services/window-size';
 import p5 from 'p5';
 import { Subscription } from 'rxjs';
+import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 
 @Component({
   selector: 'app-environment',
@@ -12,6 +13,7 @@ import { Subscription } from 'rxjs';
   template: `
     <div #canvasContainer></div>
     <app-rover #rover></app-rover>
+    <div #zoneDisplay></div>
   `,
   styleUrls: ['./environment.css']
 })
@@ -42,6 +44,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
 
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
+  @ViewChild('zoneDisplay', { static: true }) zoneDisplay!: ZoneDisplay;
 
   @Input() set roverSpeedMultiplier(value: number) {
     if (this.rover) {
@@ -130,6 +133,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         // Adjusted rectangle
         p.rect(rectX, rectY, rectW, rectH, borderRadius);
 
+        this.zoneDisplay.update(p);
+        this.zoneDisplay.draw(p); 
+        
         this.rover.update(p); // Update rover
         this.rover.draw(p);   // Render rover
       };
