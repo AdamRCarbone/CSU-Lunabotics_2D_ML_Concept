@@ -42,6 +42,27 @@ export class ZoneDisplay {
   public obstacleZone_height_px!: number;
   public obstacleZone_color: string = '#ffcb5c';
 
+  //Construction Zone
+  public constructionZone_width_meters: number = 3;
+  public constructionZone_height_meters: number = 1.5;
+  public constructionZone_width_px!: number;
+  public constructionZone_height_px!: number;
+  public constructionZone_color: string = '#ffa43d';
+
+  //Target Berm Zone
+  public targetbermZone_width_meters: number = 1.7;
+  public targetbermZone_height_meters: number = 0.8;
+  public targetbermZone_width_px!: number;
+  public targetbermZone_height_px!: number;
+  public targetbermZone_color: string = '#ff3609';
+
+  //Column Post Zone
+  public columnZone_width_meters: number = 0.75;
+  public columnZone_height_meters: number = 0.75;
+  public columnZone_width_px!: number;
+  public columnZone_height_px!: number;
+  public columnZone_color: string = '#ff0000';
+
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
@@ -57,6 +78,18 @@ export class ZoneDisplay {
       //Obstacle Zone
       this.obstacleZone_width_px = this.environment.metersToPixels(this.obstacleZone_width_meters);
       this.obstacleZone_height_px = this.environment.metersToPixels(this.obstacleZone_height_meters);
+      
+      //Construction Zone
+      this.constructionZone_width_px = this.environment.metersToPixels(this.constructionZone_width_meters);
+      this.constructionZone_height_px = this.environment.metersToPixels(this.constructionZone_height_meters);
+
+      //Target Berm Zone
+      this.targetbermZone_width_px = this.environment.metersToPixels(this.targetbermZone_width_meters);
+      this.targetbermZone_height_px = this.environment.metersToPixels(this.targetbermZone_height_meters);
+
+      //Column Post Zone
+      this.columnZone_width_px = this.environment.metersToPixels(this.columnZone_width_meters);
+      this.columnZone_height_px = this.environment.metersToPixels(this.columnZone_height_meters);
     });
   }
 
@@ -65,10 +98,53 @@ export class ZoneDisplay {
   draw(p: p5) {
     p.push();
 
+    //Stroke Parameters
     const sw = this.environment.environment_stroke_weight_px;
     p.strokeWeight(sw*.8);
     const strokeOffset = sw/2;
     const stroke_weight_comp = 1.25*sw;
+
+
+    //Column Post Zone
+    const color_pz = this.columnZone_color;
+    const rgb_pz = this.app.hexToRgb(color_pz) ?? { r: 0, g: 0, b: 0 };
+    const r_pz = rgb_pz.r;
+    const g_pz = rgb_pz.g;
+    const b_pz = rgb_pz.b;
+    const x_pos_pz = this.environment.environment_width_px/2 - this.columnZone_height_px/2;
+    const y_pos_pz =  this.environment.environment_height_px/2 - this.columnZone_width_px/2;
+
+    p.stroke(r_pz, g_pz, b_pz, 255/2);
+    p.fill(r_pz, g_pz, b_pz, 255/2);
+    p.rect(x_pos_pz, y_pos_pz, this.columnZone_width_px, this.columnZone_height_px, this.environment.environment_border_radius_px/2);
+
+
+    //Target Berm Zone
+    const color_tz = this.targetbermZone_color;
+    const rgb_tz = this.app.hexToRgb(color_tz) ?? { r: 0, g: 0, b: 0 };
+    const r_tz = rgb_tz.r;
+    const g_tz = rgb_tz.g;
+    const b_tz = rgb_tz.b;
+    const x_pos_tz = stroke_weight_comp + strokeOffset + this.environment.environment_width_px - this.constructionZone_width_px/2 - this.targetbermZone_width_px/2;
+    const y_pos_tz = this.environment.environment_height_px - this.targetbermZone_height_px - this.constructionZone_height_px/8;
+
+    p.stroke(r_tz, g_tz, b_tz, 255/2);
+    p.fill(r_tz, g_tz, b_tz, 255/2);
+    p.rect(x_pos_tz, strokeOffset + y_pos_tz, this.targetbermZone_width_px - stroke_weight_comp, this.targetbermZone_height_px , this.environment.environment_border_radius_px);
+
+
+    //Construction Zone
+    const color_cz = this.constructionZone_color;
+    const rgb_cz = this.app.hexToRgb(color_cz) ?? { r: 0, g: 0, b: 0 };
+    const r_cz = rgb_cz.r;
+    const g_cz = rgb_cz.g;
+    const b_cz = rgb_cz.b;
+    const x_pos_cz = stroke_weight_comp + strokeOffset + this.environment.environment_width_px - this.constructionZone_width_px;
+    const y_pos_cz = this.environment.environment_height_px - this.constructionZone_height_px;
+
+    p.stroke(r_cz, g_cz, b_cz, 255);
+    p.fill(r_cz, g_cz, b_cz, 30);
+    p.rect(x_pos_cz, strokeOffset + y_pos_cz, this.constructionZone_width_px - stroke_weight_comp, this.constructionZone_height_px , this.environment.environment_border_radius_px);
 
 
     //Obstacle Zone
@@ -77,8 +153,8 @@ export class ZoneDisplay {
     const r_oz = rgb_oz.r;
     const g_oz = rgb_oz.g;
     const b_oz = rgb_oz.b;
-    const y_pos_oz = this.environment.environment_height_px - this.obstacleZone_height_px;
     const x_pos_oz = this.environment.environment_width_px - this.obstacleZone_width_px;
+    const y_pos_oz = this.environment.environment_height_px - this.obstacleZone_height_px;
 
     p.stroke(r_oz, g_oz, b_oz, 255);
     p.fill(r_oz, g_oz, b_oz, 30);
