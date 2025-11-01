@@ -133,8 +133,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         // Adjusted rectangle
         p.rect(rectX, rectY, rectW, rectH, borderRadius);
 
-        this.zoneDisplay.update(p);
-        this.zoneDisplay.draw(p); 
+        this.zoneDisplay.update(p); // Update zone display
+        this.zoneDisplay.draw(p); // Render zone display
         
         this.rover.update(p); // Update rover
         this.rover.draw(p);   // Render rover
