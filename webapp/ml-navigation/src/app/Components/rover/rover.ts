@@ -98,6 +98,15 @@ export class RoverComponent implements OnInit, OnDestroy {
     return this.theta;
   }
 
+  // Center position (accounting for rover origin offset)
+  get centerX(): number {
+    return this.x + this.Rover_Origin_X;
+  }
+
+  get centerY(): number {
+    return this.y + this.Rover_Origin_Y;
+  }
+
   constructor(private windowSizeService: WindowSizeService) {
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
     this.updateProperties(height);

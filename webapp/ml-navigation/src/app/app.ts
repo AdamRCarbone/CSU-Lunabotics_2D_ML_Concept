@@ -36,16 +36,37 @@ export class App implements AfterViewInit {
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 
+  scaleRoverPosition(Axis: string, Coordinate: number): string {
+    const environmentGridSize = this.environment.grid_size;
+    const environment_height = this.environment.environment_height;
+    const environment_width = this.environment.environment_width;
+
+    let scaledCoordinate: number;
+
+    if (Axis === 'x') {
+      // Convert pixel coordinate to grid coordinate centered at origin (-grid_size/2 to +grid_size/2)
+      scaledCoordinate = (Coordinate / environment_width) * environmentGridSize - (environmentGridSize / 2);
+    } else if (Axis === 'y') {
+      // Invert y-axis (canvas y increases downward, but we want standard Cartesian)
+      // Then convert to grid coordinate centered at origin
+      scaledCoordinate = ((environment_height - Coordinate) / environment_height) * environmentGridSize - (environmentGridSize / 2);
+    } else {
+      return '0';
+    }
+
+    return scaledCoordinate.toFixed(2);
+  }
+
   updateRoverPosition() {
     this.positionParams = [
-      { name: 'x', value: this.environment.rover.x.toFixed(2) },
-      { name: 'y', value: this.environment.rover.y.toFixed(2) }
+      { name: 'x', value: this.scaleRoverPosition('x', this.environment.rover.centerX) },
+      { name: 'y', value: this.scaleRoverPosition('y', this.environment.rover.centerY) }
     ];
   }
 
   ngAfterViewInit() {
     this.updateRoverPosition();
-    
+
     this.ngZone.runOutsideAngular(() => {
       setInterval(() => {
         if (this.environment) {
