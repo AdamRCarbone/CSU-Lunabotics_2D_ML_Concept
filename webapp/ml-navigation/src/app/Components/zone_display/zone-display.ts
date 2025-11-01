@@ -51,7 +51,7 @@ export class ZoneDisplay {
     p.fill(r, g, b, 25);
 
     const sw = this.environment.environment_stroke_weight_px;
-    p.strokeWeight(sw / 2);
+    p.strokeWeight(sw*.8);
     const strokeOffset = sw / 2;
 
     // Position zone in bottom-left corner

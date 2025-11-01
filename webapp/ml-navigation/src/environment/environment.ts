@@ -118,8 +118,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     // Initialize p5.js
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
-        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
-        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
+        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
+        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
         const canvas = p.createCanvas(canvasWidth, canvasHeight);
         canvas.parent(this.canvasContainer.nativeElement);
         p.angleMode(p.DEGREES);
@@ -141,6 +141,11 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         
         this.rover.update(p); // Update rover
         this.rover.draw(p);   // Render rover
+
+        p.noFill();
+        p.stroke(150);
+        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+
       };
 
       p.keyPressed = (event: KeyboardEvent) => {
