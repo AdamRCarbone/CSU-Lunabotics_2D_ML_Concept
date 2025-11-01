@@ -27,6 +27,7 @@ export class App implements AfterViewInit {
     { name: 'x', value: '—' },
     { name: 'y', value: '—' }
   ];
+  public positionParams_sigfig: number = 3;
 
   constructor(
     private windowSizeService: WindowSizeService,
@@ -55,7 +56,7 @@ export class App implements AfterViewInit {
       return '0';
     }
 
-    return scaledCoordinate.toFixed(2);
+    return scaledCoordinate.toFixed(this.positionParams_sigfig);
   }
 
   updateRoverPosition() {
@@ -79,12 +80,12 @@ export class App implements AfterViewInit {
                 Math.abs(this.speedValue - newSpeed) > 0.01) {
               this.rotationValue = newRotation;
               this.speedValue = newSpeed;
-              this.cdr.markForCheck();
             }
 
             // Update position parameters
             if (this.environment.rover) {
               this.updateRoverPosition();
+              this.cdr.markForCheck();
             }
           });
         }

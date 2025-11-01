@@ -1,7 +1,7 @@
 .parameter-container {
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: left;
   gap: 0rem;
 }
 
@@ -15,10 +15,12 @@
 .parameters {
   font-family: system-ui, -apple-system, sans-serif;
   font-size: 0.875rem;
-  text-align: center;
+  text-align: left;
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  align-items: flex-start;
+  margin-left: 0.5rem;
 }
 
 .parameter-row {
