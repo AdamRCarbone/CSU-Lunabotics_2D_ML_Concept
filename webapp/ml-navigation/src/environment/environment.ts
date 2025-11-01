@@ -24,6 +24,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public environment_height_meters: number = 5;
   public rover_start_x_meters: number = 0.5; // meters from left edge (0 to 6.8)
   public rover_start_y_meters: number = 0.5; // meters from bottom edge (0 to 5)
+  public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)
 
   // ===== PIXEL-BASED PROPERTIES (FOR RENDERING) =====
   public environment_width_px!: number;

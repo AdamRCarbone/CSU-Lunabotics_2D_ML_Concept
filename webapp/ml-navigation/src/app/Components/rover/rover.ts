@@ -118,11 +118,18 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
-    // Rover Properties
-    this.Rover_Stroke_Thickness = 0.25 * this.cell;
-    this.Rover_Width = this.cell * 3;
-    this.Rover_Height = this.cell * 5;
-    this.Rover_Radius = this.cell * 0.5;
+    // Calculate rover dimensions from rover_length_meters
+    // Convert rover length from meters to pixels
+    const metersToPixels = this.environment.environment_height_px / this.environment.environment_height_meters;
+    this.Rover_Height = this.environment.rover_length_meters/2 * metersToPixels;
+
+    // Maintain 3:5 width:height ratio (width = height * 0.6)
+    this.Rover_Width = this.Rover_Height * 0.6;
+
+    // Scale other properties proportionally to rover height
+    const heightScale = this.Rover_Height / 5; // Base scale factor (original was 5 cells)
+    this.Rover_Stroke_Thickness = 0.25 * heightScale;
+    this.Rover_Radius = 0.5 * heightScale;
     this.Rover_Origin_X = this.Rover_Width / 2;
     this.Rover_Origin_Y = this.Rover_Height / 2;
 
