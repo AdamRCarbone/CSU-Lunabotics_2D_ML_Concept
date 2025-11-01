@@ -37,19 +37,20 @@ export class App implements AfterViewInit {
   }
 
   scaleRoverPosition(Axis: string, Coordinate: number): string {
-    const environmentGridSize = this.environment.grid_size;
     const environment_height = this.environment.environment_height;
     const environment_width = this.environment.environment_width;
+    const x_width_meters = this.environment.environment_x_width;
+    const y_height_meters = this.environment.environment_y_height;
 
     let scaledCoordinate: number;
 
     if (Axis === 'x') {
-      // Convert pixel coordinate to grid coordinate centered at origin (-grid_size/2 to +grid_size/2)
-      scaledCoordinate = (Coordinate / environment_width) * environmentGridSize - (environmentGridSize / 2);
+      // Convert pixel coordinate to meters (0 to x_width_meters)
+      scaledCoordinate = (Coordinate / environment_width) * x_width_meters;
     } else if (Axis === 'y') {
-      // Invert y-axis (canvas y increases downward, but we want standard Cartesian)
-      // Then convert to grid coordinate centered at origin
-      scaledCoordinate = ((environment_height - Coordinate) / environment_height) * environmentGridSize - (environmentGridSize / 2);
+      // Invert y-axis (canvas y=0 is top, we want y=0 at bottom)
+      // Then convert to meters (0 to y_height_meters)
+      scaledCoordinate = ((environment_height - Coordinate) / environment_height) * y_height_meters;
     } else {
       return '0';
     }

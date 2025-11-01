@@ -27,6 +27,13 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public environment_stroke_weight: number;
   public rover_start_x: number;
   public rover_start_y: number;
+  public environment_x_width: number = 6.8; //meters
+  public environment_y_height: number = 5; //meters
+  public xy_scale_factor: number = 10;
+
+  // Starting position in meters (0,0 is bottom-left, max is top-right)
+  public rover_start_x_meters: number = 0.5; // meters from left edge
+  public rover_start_y_meters: number = 0.5; // meters from bottom edge
 
 
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
@@ -55,23 +62,30 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize with current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
-    this.environment_width = height / 1.5;
-    this.environment_height = height / 1.5;
+    this.environment_width = height * this.environment_x_width / this.xy_scale_factor;
+    this.environment_height = height * this.environment_y_height / this.xy_scale_factor;
     this.cell_size = this.environment_height / this.grid_size;
     this.environment_border_radius = this.cell_size / 2.5;
     this.environment_stroke_weight = this.cell_size / 2;
-    this.rover_start_x = this.environment_width / 8;
-    this.rover_start_y = this.environment_height / 1.15;
+
+    // Convert meter-based starting position to pixel coordinates
+    this.rover_start_x = (this.rover_start_x_meters / this.environment_x_width) * this.environment_width;
+    this.rover_start_y = this.environment_height - ((this.rover_start_y_meters / this.environment_y_height) * this.environment_height);
   }
 
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
-      this.environment_width = height / 1.5;
-      this.environment_height = height / 1.5;
+
+      this.environment_width = height * this.environment_x_width / this.xy_scale_factor;
+      this.environment_height = height * this.environment_y_height / this.xy_scale_factor;
       this.cell_size = this.environment_height / this.grid_size;
       this.environment_border_radius = this.cell_size / 2.5;
       this.environment_stroke_weight = this.cell_size / 2;
+
+      // Convert meter-based starting position to pixel coordinates
+      this.rover_start_x = (this.rover_start_x_meters / this.environment_x_width) * this.environment_width;
+      this.rover_start_y = this.environment_height - ((this.rover_start_y_meters / this.environment_y_height) * this.environment_height);
 
       // Reset rover position
       this.rover.x = this.rover_start_x;
