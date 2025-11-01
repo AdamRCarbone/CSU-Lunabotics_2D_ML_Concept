@@ -113,9 +113,9 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   private updateProperties(windowHeight: number) {
-    // Match EnvironmentComponent's logic: environment_width/height = window_height / 1.5
-    this.window_width = windowHeight / 1.5;
-    this.window_height = windowHeight / 1.5;
+    // Use environment's actual dimensions for scaling
+    this.window_width = this.environment.environment_width_px;
+    this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
     // Rover Properties

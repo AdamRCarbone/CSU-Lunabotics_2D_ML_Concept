@@ -93,10 +93,6 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
       this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
-      // Reset rover position
-      this.rover.x = this.rover_start_x_px;
-      this.rover.y = this.rover_start_y_px;
-
       // Resize the p5.js canvas
       if (this.p5Instance) {
         this.p5Instance.resizeCanvas(this.environment_width_px, this.environment_height_px);
