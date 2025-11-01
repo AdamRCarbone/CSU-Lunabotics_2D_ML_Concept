@@ -21,17 +21,26 @@ export class ZoneDisplay {
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
+  //Starting Zone
   public startingZone_width_meters: number = 2;
   public startingZone_height_meters: number = 2;
   public startingZone_width_px!: number;
   public startingZone_height_px!: number;
   public startingZone_color: string = '#69D140';
 
+  //Excavation Zone
   public excavationZone_width_meters: number = 2.5;
   public excavationZone_height_meters: number = this.environment.environment_height_meters;
   public excavationZone_width_px!: number;
   public excavationZone_height_px!: number;
   public excavationZone_color: string = '#4099d1';
+
+  //Obstacle Zone
+  public obstacleZone_width_meters: number = 4.38;
+  public obstacleZone_height_meters: number = this.environment.environment_height_meters;
+  public obstacleZone_width_px!: number;
+  public obstacleZone_height_px!: number;
+  public obstacleZone_color: string = '#ffcb5c';
 
   ngOnInit() {
     // Subscribe to window size changes
@@ -44,6 +53,10 @@ export class ZoneDisplay {
       //Excavation Zone
       this.excavationZone_width_px = this.environment.metersToPixels(this.excavationZone_width_meters);
       this.excavationZone_height_px = this.environment.metersToPixels(this.excavationZone_height_meters);
+
+      //Obstacle Zone
+      this.obstacleZone_width_px = this.environment.metersToPixels(this.obstacleZone_width_meters);
+      this.obstacleZone_height_px = this.environment.metersToPixels(this.obstacleZone_height_meters);
     });
   }
 
@@ -54,7 +67,22 @@ export class ZoneDisplay {
 
     const sw = this.environment.environment_stroke_weight_px;
     p.strokeWeight(sw*.8);
-    const strokeOffset = sw / 2;
+    const strokeOffset = sw/2;
+    const stroke_weight_comp = 1.25*sw;
+
+
+    //Obstacle Zone
+    const color_oz = this.obstacleZone_color;
+    const rgb_oz = this.app.hexToRgb(color_oz) ?? { r: 0, g: 0, b: 0 };
+    const r_oz = rgb_oz.r;
+    const g_oz = rgb_oz.g;
+    const b_oz = rgb_oz.b;
+    const y_pos_oz = this.environment.environment_height_px - this.obstacleZone_height_px;
+    const x_pos_oz = this.environment.environment_width_px - this.obstacleZone_width_px;
+
+    p.stroke(r_oz, g_oz, b_oz, 255);
+    p.fill(r_oz, g_oz, b_oz, 30);
+    p.rect(x_pos_oz + strokeOffset + stroke_weight_comp, strokeOffset + y_pos_oz, this.obstacleZone_width_px - stroke_weight_comp, this.obstacleZone_height_px, this.environment.environment_border_radius_px);
 
 
     //Excavation Zone
@@ -67,7 +95,7 @@ export class ZoneDisplay {
 
     p.stroke(r_ez, g_ez, b_ez, 255);
     p.fill(r_ez, g_ez, b_ez, 30);
-    p.rect(strokeOffset, strokeOffset + y_pos_ez, this.excavationZone_width_px, this.excavationZone_height_px, this.environment.environment_border_radius_px);
+    p.rect(strokeOffset, strokeOffset + y_pos_ez, this.excavationZone_width_px - stroke_weight_comp, this.excavationZone_height_px, this.environment.environment_border_radius_px);
 
 
     //Starting Zone
@@ -80,7 +108,7 @@ export class ZoneDisplay {
 
     p.stroke(r_sz, g_sz, b_sz, 255);
     p.fill(r_sz, g_sz, b_sz, 50);
-    p.rect(strokeOffset, strokeOffset + y_pos_sz, this.startingZone_width_px, this.startingZone_height_px, this.environment.environment_border_radius_px);
+    p.rect(strokeOffset, strokeOffset + y_pos_sz, this.startingZone_width_px - stroke_weight_comp, this.startingZone_height_px , this.environment.environment_border_radius_px);
 
     
     p.pop();

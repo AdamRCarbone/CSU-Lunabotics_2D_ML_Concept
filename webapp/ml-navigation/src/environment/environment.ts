@@ -97,11 +97,12 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
 
       // Calculate pixel dimensions from meters
-      this.environment_width_px = height * this.environment_width_meters / this.xy_scale_factor;
-      this.environment_height_px = height * this.environment_height_meters / this.xy_scale_factor;
       this.cell_size_px = this.environment_height_px / this.grid_size;
       this.environment_border_radius_px = this.cell_size_px;
       this.environment_stroke_weight_px = this.cell_size_px / 2;
+
+      this.environment_width_px = (height * this.environment_width_meters / this.xy_scale_factor);
+      this.environment_height_px = (height * this.environment_height_meters / this.xy_scale_factor);
 
       // Convert meter-based starting position to pixel coordinates
       this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
