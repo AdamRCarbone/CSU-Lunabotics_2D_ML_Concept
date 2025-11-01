@@ -5,6 +5,8 @@ import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
 import p5 from 'p5';
 import { App } from '../../app';
+import { ResetTrigger } from '../../services/reset-trigger';
+import { RoverCollisionDetector } from './rover_reset';
 
 @Component({
   selector: 'app-rover',
@@ -14,8 +16,11 @@ import { App } from '../../app';
 })
 export class RoverComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
+  private resetSubscription!: Subscription;
+  private collisionDetector!: RoverCollisionDetector;
   environment = inject(EnvironmentComponent);
   App = inject(App);
+  ResetTrigger = inject(ResetTrigger);
 
   // Properties
   window_width!: number;
@@ -47,6 +52,16 @@ export class RoverComponent implements OnInit, OnDestroy {
   Bucket_Arm_Left_X!: number;
   Bucket_Arm_Right_X!: number;
   Bucket_Arm_Y!: number;
+
+  // Bounding Box
+  BoundingBox_Left!: number;   // Distance from center to left edge
+  BoundingBox_Right!: number;  // Distance from center to right edge
+  BoundingBox_Top!: number;    // Distance from center to top edge
+  BoundingBox_Bottom!: number; // Distance from center to bottom edge
+  BoundingBox_OffsetX!: number; //rover center to box center
+  BoundingBox_OffsetY!: number; //rover center to box center
+  public showBoundingBox: boolean = true;
+  public bound_box_opacity: number = 0;
 
   // Rover State
   public x!: number;
@@ -113,20 +128,23 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.updateProperties(height);
   }
 
+  private clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
+
   private updateProperties(windowHeight: number) {
-    // Use environment's dimensions for scaling
+    // scaling using environment dimensions 
     this.window_width = this.environment.environment_width_px;
     this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
-    // Calculate rover dimensions from rover_length_meters and meters to pixels
     const metersToPixels = this.environment.environment_height_px / this.environment.environment_height_meters;
     this.Rover_Height = this.environment.rover_length_meters/2 * metersToPixels;
 
     // 3:5 width:height ratio
     this.Rover_Width = this.Rover_Height * 0.6;
 
-    // Scale other properties proportionally
+    // Scale properties proportionally
     const heightScale = this.Rover_Height / 5; // Base scale factor (original was 5 cells)
     this.Rover_Stroke_Thickness = 0.25 * heightScale;
     this.Rover_Radius = 0.5 * heightScale;
@@ -155,13 +173,56 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
     this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
 
+    // Calculate bounding box that encompasses all visual elements
+    this.calculateBoundingBox();
+
     this.updateSpeed();
+  }
+
+  private calculateBoundingBox() {
+    // Collect all edges to find extremes
+    const allX = [
+      -this.Rover_Width / 2, this.Rover_Width / 2,
+      this.Wheel_Left_X, this.Wheel_Left_X + this.Wheel_Width,
+      this.Wheel_Right_X, this.Wheel_Right_X + this.Wheel_Width,
+      this.Bucket_X, this.Bucket_X + this.Bucket_Width,
+      this.Bucket_Arm_Left_X, this.Bucket_Arm_Left_X + this.Bucket_Arm_Width,
+      this.Bucket_Arm_Right_X, this.Bucket_Arm_Right_X + this.Bucket_Arm_Width
+    ];
+
+    const allY = [
+      -this.Rover_Height / 2, this.Rover_Height / 2,
+      this.Wheel_Front_Y, this.Wheel_Back_Y + this.Wheel_Height,
+      this.Bucket_Y, this.Bucket_Y + this.Bucket_Height,
+      this.Bucket_Arm_Y, this.Bucket_Arm_Y + this.Bucket_Arm_Height
+    ];
+
+    const minX = Math.min(...allX);
+    const maxX = Math.max(...allX);
+    const minY = Math.min(...allY);
+    const maxY = Math.max(...allY);
+
+    // Calculate offset and half-extents
+    this.BoundingBox_OffsetX = (minX + maxX) / 2;
+    this.BoundingBox_OffsetY = (minY + maxY) / 2;
+
+    const halfWidth = (maxX - minX) / 2;
+    const halfHeight = (maxY - minY) / 2;
+
+    this.BoundingBox_Left = halfWidth;
+    this.BoundingBox_Right = halfWidth;
+    this.BoundingBox_Top = halfHeight;
+    this.BoundingBox_Bottom = halfHeight;
+    this.bound_box_opacity = 0;
   }
 
   ngOnInit() {
     // Initialize rover position
     this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
     this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
+
+    // Initialize collision detector
+    this.collisionDetector = new RoverCollisionDetector(this.ResetTrigger, this.environment);
 
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
@@ -182,11 +243,34 @@ export class RoverComponent implements OnInit, OnDestroy {
         this.y = oldY * heightRatio;
       }
     });
+
+    // Subscribe to reset trigger
+    this.resetSubscription = this.ResetTrigger.reset$.subscribe(() => {
+      this.resetRoverPosition();
+    });
+  }
+
+  private resetRoverPosition() {
+    // Reset position to start position
+    this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
+    this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
+
+    // Reset rotation
+    this.theta = 0;
+    this.targetTheta = 0;
+
+    // Reset speed
+    this._speedMultiplier = 0;
+    this._targetSpeedFromSlider = 0;
+    this.updateSpeed();
   }
 
   ngOnDestroy() {
     if (this.windowSizeSubscription) {
       this.windowSizeSubscription.unsubscribe();
+    }
+    if (this.resetSubscription) {
+      this.resetSubscription.unsubscribe();
     }
   }
 
@@ -232,6 +316,19 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
+
+    this.collisionDetector.checkCollisions(
+      this.centerX,
+      this.centerY,
+      this.BoundingBox_OffsetX,
+      this.BoundingBox_OffsetY,
+      this.BoundingBox_Left,
+      this.BoundingBox_Right,
+      this.BoundingBox_Top,
+      this.BoundingBox_Bottom,
+      this.theta
+    );
+
   }
 
   draw(p: p5) {
@@ -263,6 +360,19 @@ export class RoverComponent implements OnInit, OnDestroy {
     p.rect(this.Bucket_Arm_Left_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
+
+    // Draw bounding box if enabled
+    if (this.showBoundingBox) {
+      p.stroke(255, 0, 0, this.bound_box_opacity);
+      p.strokeWeight(2);
+      p.noFill();
+      p.rectMode(p.CENTER);
+      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
+      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
+      // Draw at offset position (bounding box center offset from rover body center)
+      p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
+      p.rectMode(p.CORNER); // Reset to default
+    }
 
     p.pop();
   }
