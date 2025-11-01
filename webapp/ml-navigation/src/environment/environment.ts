@@ -66,6 +66,16 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     return this.rover ? this.rover.currentSpeed : 0;
   }
 
+  // ===== CONVERSION UTILITIES =====
+  // Centralized meter/pixel conversion functions
+  metersToPixels(meters: number): number {
+    return meters * (this.environment_height_px / this.environment_height_meters);
+  }
+
+  pixelsToMeters(pixels: number): number {
+    return pixels * (this.environment_height_meters / this.environment_height_px);
+  }
+
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize using current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
@@ -123,15 +133,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         p.strokeWeight(sw);
         const strokeOffset = sw / 2;
 
-        const rectX = strokeOffset;
-        const rectY = strokeOffset;
-
-        const rectW = this.environment_width_px - sw;
-        const rectH = this.environment_height_px - sw;
-        const borderRadius = this.environment_border_radius_px;
-
-        // Adjusted rectangle
-        p.rect(rectX, rectY, rectW, rectH, borderRadius);
+        // Draw at full dimensions - stroke will extend outside (centered on edge)
+        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
 
         this.zoneDisplay.update(p); // Update zone display
         this.zoneDisplay.draw(p); // Render zone display
