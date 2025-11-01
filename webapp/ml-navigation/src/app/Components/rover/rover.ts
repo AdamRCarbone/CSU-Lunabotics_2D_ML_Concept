@@ -53,14 +53,14 @@ export class RoverComponent implements OnInit, OnDestroy {
   Bucket_Arm_Right_X!: number;
   Bucket_Arm_Y!: number;
 
-  // Bounding Box (encompasses all visual elements)
+  // Bounding Box
   BoundingBox_Left!: number;   // Distance from center to left edge
   BoundingBox_Right!: number;  // Distance from center to right edge
   BoundingBox_Top!: number;    // Distance from center to top edge
   BoundingBox_Bottom!: number; // Distance from center to bottom edge
-  BoundingBox_OffsetX!: number; // X offset from rover center to bounding box center
-  BoundingBox_OffsetY!: number; // Y offset from rover center to bounding box center
-  public showBoundingBox: boolean = true; // Toggle bounding box
+  BoundingBox_OffsetX!: number; //rover center to box center
+  BoundingBox_OffsetY!: number; //rover center to box center
+  public showBoundingBox: boolean = true;
   public bound_box_opacity: number = 0;
 
   // Rover State
@@ -133,19 +133,18 @@ export class RoverComponent implements OnInit, OnDestroy {
 }
 
   private updateProperties(windowHeight: number) {
-    // Use environment's dimensions for scaling
+    // scaling using environment dimensions 
     this.window_width = this.environment.environment_width_px;
     this.window_height = this.environment.environment_height_px;
     this.cell = this.window_height / this.grid_size;
 
-    // Calculate rover dimensions from rover_length_meters and meters to pixels
     const metersToPixels = this.environment.environment_height_px / this.environment.environment_height_meters;
     this.Rover_Height = this.environment.rover_length_meters/2 * metersToPixels;
 
     // 3:5 width:height ratio
     this.Rover_Width = this.Rover_Height * 0.6;
 
-    // Scale other properties proportionally
+    // Scale properties proportionally
     const heightScale = this.Rover_Height / 5; // Base scale factor (original was 5 cells)
     this.Rover_Stroke_Thickness = 0.25 * heightScale;
     this.Rover_Radius = 0.5 * heightScale;
@@ -318,8 +317,6 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
 
-    // Check for collisions using bounding box
-    // Pass the bounding box center position (rover center + offset)
     this.collisionDetector.checkCollisions(
       this.centerX,
       this.centerY,
@@ -364,15 +361,15 @@ export class RoverComponent implements OnInit, OnDestroy {
     p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
     p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
 
-    // Draw bounding box if enabled (for debugging)
+    // Draw bounding box if enabled
     if (this.showBoundingBox) {
-      p.stroke(255, 0, 0, this.bound_box_opacity); // Red color
+      p.stroke(255, 0, 0, this.bound_box_opacity);
       p.strokeWeight(2);
       p.noFill();
       p.rectMode(p.CENTER);
       const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
       const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
-      // Draw at offset position (bounding box center is offset from rover body center)
+      // Draw at offset position (bounding box center offset from rover body center)
       p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
       p.rectMode(p.CORNER); // Reset to default
     }
