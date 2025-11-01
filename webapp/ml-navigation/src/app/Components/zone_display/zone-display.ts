@@ -27,39 +27,62 @@ export class ZoneDisplay {
   public startingZone_height_px!: number;
   public startingZone_color: string = '#69D140';
 
+  public excavationZone_width_meters: number = 2.5;
+  public excavationZone_height_meters: number = this.environment.environment_height_meters;
+  public excavationZone_width_px!: number;
+  public excavationZone_height_px!: number;
+  public excavationZone_color: string = '#4099d1';
+
   ngOnInit() {
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
-      // Use centralized conversion function
+
+      //Starting Zone
       this.startingZone_width_px = this.environment.metersToPixels(this.startingZone_width_meters);
       this.startingZone_height_px = this.environment.metersToPixels(this.startingZone_height_meters);
+
+      //Excavation Zone
+      this.excavationZone_width_px = this.environment.metersToPixels(this.excavationZone_width_meters);
+      this.excavationZone_height_px = this.environment.metersToPixels(this.excavationZone_height_meters);
     });
   }
 
   update(p: p5) {}
 
   draw(p: p5) {
-    const color = this.startingZone_color;
-    const rgb = this.app.hexToRgb(color) ?? { r: 0, g: 0, b: 0 };
-    const r = rgb.r;
-    const g = rgb.g;
-    const b = rgb.b;
-
     p.push();
-
-    p.stroke(r, g, b, 255);
-    p.fill(r, g, b, 25);
 
     const sw = this.environment.environment_stroke_weight_px;
     p.strokeWeight(sw*.8);
     const strokeOffset = sw / 2;
 
-    // Position zone in bottom-left corner
-    const y_pos = this.environment.environment_height_px - this.startingZone_height_px;
 
-    // Draw at exact dimensions - stroke will extend outside (centered on edge)
-    p.rect(strokeOffset, strokeOffset + y_pos, this.startingZone_width_px, this.startingZone_height_px, this.environment.environment_border_radius_px);
+    //Excavation Zone
+    const color_ez = this.excavationZone_color;
+    const rgb_ez = this.app.hexToRgb(color_ez) ?? { r: 0, g: 0, b: 0 };
+    const r_ez = rgb_ez.r;
+    const g_ez = rgb_ez.g;
+    const b_ez = rgb_ez.b;
+    const y_pos_ez = this.environment.environment_height_px - this.excavationZone_height_px;
 
+    p.stroke(r_ez, g_ez, b_ez, 255);
+    p.fill(r_ez, g_ez, b_ez, 30);
+    p.rect(strokeOffset, strokeOffset + y_pos_ez, this.excavationZone_width_px, this.excavationZone_height_px, this.environment.environment_border_radius_px);
+
+
+    //Starting Zone
+    const color_sz = this.startingZone_color;
+    const rgb_sz = this.app.hexToRgb(color_sz) ?? { r: 0, g: 0, b: 0 };
+    const r_sz = rgb_sz.r;
+    const g_sz = rgb_sz.g;
+    const b_sz = rgb_sz.b;
+    const y_pos_sz = this.environment.environment_height_px - this.startingZone_height_px;
+
+    p.stroke(r_sz, g_sz, b_sz, 255);
+    p.fill(r_sz, g_sz, b_sz, 50);
+    p.rect(strokeOffset, strokeOffset + y_pos_sz, this.startingZone_width_px, this.startingZone_height_px, this.environment.environment_border_radius_px);
+
+    
     p.pop();
   }
 }
