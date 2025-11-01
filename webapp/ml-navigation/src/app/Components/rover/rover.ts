@@ -61,6 +61,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   BoundingBox_OffsetX!: number; // X offset from rover center to bounding box center
   BoundingBox_OffsetY!: number; // Y offset from rover center to bounding box center
   public showBoundingBox: boolean = true; // Toggle bounding box
+  public bound_box_opacity: number = 0;
 
   // Rover State
   public x!: number;
@@ -126,6 +127,10 @@ export class RoverComponent implements OnInit, OnDestroy {
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
     this.updateProperties(height);
   }
+
+  private clamp(v: number, lo: number, hi: number) {
+  return Math.max(lo, Math.min(hi, v));
+}
 
   private updateProperties(windowHeight: number) {
     // Use environment's dimensions for scaling
@@ -209,6 +214,7 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.BoundingBox_Right = halfWidth;
     this.BoundingBox_Top = halfHeight;
     this.BoundingBox_Bottom = halfHeight;
+    this.bound_box_opacity = 0;
   }
 
   ngOnInit() {
@@ -325,6 +331,7 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.BoundingBox_Bottom,
       this.theta
     );
+
   }
 
   draw(p: p5) {
@@ -359,7 +366,7 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     // Draw bounding box if enabled (for debugging)
     if (this.showBoundingBox) {
-      p.stroke(255, 0, 0); // Red color
+      p.stroke(255, 0, 0, this.bound_box_opacity); // Red color
       p.strokeWeight(2);
       p.noFill();
       p.rectMode(p.CENTER);
