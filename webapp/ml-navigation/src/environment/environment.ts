@@ -5,15 +5,17 @@ import { WindowSizeService } from '../app/services/window-size';
 import p5 from 'p5';
 import { Subscription } from 'rxjs';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
+import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 
 @Component({
   selector: 'app-environment',
   standalone: true,
-  imports: [RoverComponent, ZoneDisplay],
+  imports: [RoverComponent, ZoneDisplay, ObstacleField],
   template: `
     <div #canvasContainer></div>
     <app-rover #rover></app-rover>
     <app-zone-display #zoneDisplay></app-zone-display>
+    <app-obstacle-field #obstacleField></app-obstacle-field>
   `,
   styleUrls: ['./environment.css']
 })
@@ -45,6 +47,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
   @ViewChild('zoneDisplay', { static: true }) zoneDisplay!: ZoneDisplay;
+  @ViewChild('obstacleField', { static: true }) obstacleField!: ObstacleField;
 
   @Input() set roverSpeedMultiplier(value: number) {
     if (this.rover) {
@@ -137,11 +140,14 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         // Draw at full dimensions - stroke will extend outside (centered on edge)
         p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
 
-        this.zoneDisplay.update(p); // Update zone display
-        this.zoneDisplay.draw(p); // Render zone display
-        
-        this.rover.update(p); // Update rover
-        this.rover.draw(p);   // Render rover
+        this.zoneDisplay.update(p);    // Update zone display
+        this.zoneDisplay.draw(p);      // Render zone display
+
+        this.obstacleField.update(p);  // Update obstacle field
+        this.obstacleField.draw(p);    // Render obstacles
+
+        this.rover.update(p);          // Update rover
+        this.rover.draw(p);            // Render rover
 
         p.noFill();
         p.stroke(150);

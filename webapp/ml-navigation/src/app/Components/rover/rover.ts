@@ -60,8 +60,8 @@ export class RoverComponent implements OnInit, OnDestroy {
   BoundingBox_Bottom!: number; // Distance from center to bottom edge
   BoundingBox_OffsetX!: number; //rover center to box center
   BoundingBox_OffsetY!: number; //rover center to box center
-  public showBoundingBox: boolean = true;
-  public bound_box_opacity: number = 50;
+  public showBoundingBox: boolean = false;
+  public bound_box_opacity: number = 255;
 
   // Rover State
   public x!: number;
@@ -316,8 +316,10 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
 
-    // Get collidable objects from zone display
-    const collidableObjects = this.environment.zoneDisplay?.collidableObjects || [];
+    // Get collidable objects from both zone display (column post) and obstacle field (rocks/craters)
+    const zoneObjects = this.environment.zoneDisplay?.collidableObjects || [];
+    const obstacleObjects = this.environment.obstacleField?.collidableObjects || [];
+    const collidableObjects = [...zoneObjects, ...obstacleObjects];
 
     this.collisionDetector.checkCollisions(
       this.centerX,
@@ -329,7 +331,7 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.BoundingBox_Top,
       this.BoundingBox_Bottom,
       this.theta,
-      collidableObjects  // Pass the collidable objects
+      collidableObjects  // Pass all collidable objects
     );
 
   }
