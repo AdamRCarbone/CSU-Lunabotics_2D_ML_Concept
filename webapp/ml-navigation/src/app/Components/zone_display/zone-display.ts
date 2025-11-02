@@ -5,6 +5,7 @@ import { EnvironmentComponent } from '../../../environment/environment';
 import { WindowSizeService } from '../../../app/services/window-size';
 import { App } from '../../app';
 import { CollidableObject, CollisionShape } from '../collidable-object/collidable-object';
+import { ZONE_COLORS } from '../zone-legend/zone-legend';
 
 
 @Component({
@@ -27,45 +28,42 @@ export class ZoneDisplay {
   public startingZone_height_meters: number = 2;
   public startingZone_width_px!: number;
   public startingZone_height_px!: number;
-  public startingZone_color: string = '#69D140';
-
-  // Collidable objects in the environment
-  public collidableObjects: CollidableObject[] = [];
+  public startingZone_color: string = ZONE_COLORS.startingZone;
 
   //Excavation Zone
   public excavationZone_width_meters: number = 2.5;
   public excavationZone_height_meters: number = this.environment.environment_height_meters;
   public excavationZone_width_px!: number;
   public excavationZone_height_px!: number;
-  public excavationZone_color: string = '#4099d1';
+  public excavationZone_color: string = ZONE_COLORS.excavationZone;
 
   //Obstacle Zone
   public obstacleZone_width_meters: number = 4.38;
   public obstacleZone_height_meters: number = this.environment.environment_height_meters;
   public obstacleZone_width_px!: number;
   public obstacleZone_height_px!: number;
-  public obstacleZone_color: string = '#ffcb5c';
+  public obstacleZone_color: string = ZONE_COLORS.obstacleZone;
 
   //Construction Zone
   public constructionZone_width_meters: number = 3;
   public constructionZone_height_meters: number = 1.5;
   public constructionZone_width_px!: number;
   public constructionZone_height_px!: number;
-  public constructionZone_color: string = '#ffa43d';
+  public constructionZone_color: string = ZONE_COLORS.constructionZone;
 
   //Target Berm Zone
   public targetbermZone_width_meters: number = 1.7;
   public targetbermZone_height_meters: number = 0.8;
   public targetbermZone_width_px!: number;
   public targetbermZone_height_px!: number;
-  public targetbermZone_color: string = '#ff3609';
+  public targetbermZone_color: string = ZONE_COLORS.targetBermZone;
 
   //Column Post Zone
   public columnZone_width_meters: number = 0.75;
   public columnZone_height_meters: number = 0.75;
   public columnZone_width_px!: number;
   public columnZone_height_px!: number;
-  public columnZone_color: string = '#ffffff';
+  public columnZone_color: string = ZONE_COLORS.columnPostZone;
 
   ngOnInit() {
     // Initialize collidable objects

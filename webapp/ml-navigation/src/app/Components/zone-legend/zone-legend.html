@@ -1,0 +1,21 @@
+<div class="legend-container">
+  <div class="legend-header">Zone Legend</div>
+
+  <div class="legend-items">
+    @for (zone of zones; track zone.name) {
+      <div class="legend-item">
+        <div
+          class="zone-indicator"
+          [style.background]="zone.color"
+          [style.border-color]="zone.color">
+        </div>
+        <div class="zone-info">
+          <span class="zone-name">{{ zone.name }}</span>
+          @if (zone.description) {
+            <span class="zone-description">{{ zone.description }}</span>
+          }
+        </div>
+      </div>
+    }
+  </div>
+</div>
