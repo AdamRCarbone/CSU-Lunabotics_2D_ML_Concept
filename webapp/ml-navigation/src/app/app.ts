@@ -5,11 +5,12 @@ import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
 import { ParameterDisplay, Parameter } from "./Components/parameter_display/parameter-display";
+import { ZoneLegend } from './Components/zone-legend/zone-legend';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
