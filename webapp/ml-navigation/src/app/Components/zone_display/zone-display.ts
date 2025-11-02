@@ -23,6 +23,9 @@ export class ZoneDisplay {
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
 
+  // Collidable objects in the environment
+  public collidableObjects: CollidableObject[] = [];
+
   //Starting Zone
   public startingZone_width_meters: number = 2;
   public startingZone_height_meters: number = 2;
