@@ -2,12 +2,18 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px 20px;
+
   background: #ffffff00;
   min-width: 100px;
+
 }
 
 .position-display {
   align-self: flex-start;
-  margin-left: 3.5rem;
+  margin-left: 1rem;
+}
+
+.zone-legend-display {
+  align-self: flex-start;
+  margin-right: 1rem;
 }
