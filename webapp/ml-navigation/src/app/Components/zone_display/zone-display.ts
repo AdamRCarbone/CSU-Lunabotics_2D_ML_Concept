@@ -4,6 +4,7 @@ import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
 import { WindowSizeService } from '../../../app/services/window-size';
 import { App } from '../../app';
+import { CollidableObject, CollisionShape } from '../collidable-object/collidable-object';
 
 
 @Component({
@@ -27,6 +28,9 @@ export class ZoneDisplay {
   public startingZone_width_px!: number;
   public startingZone_height_px!: number;
   public startingZone_color: string = '#69D140';
+
+  // Collidable objects in the environment
+  public collidableObjects: CollidableObject[] = [];
 
   //Excavation Zone
   public excavationZone_width_meters: number = 2.5;
@@ -64,6 +68,9 @@ export class ZoneDisplay {
   public columnZone_color: string = '#ff0000';
 
   ngOnInit() {
+    // Initialize collidable objects
+    this.initializeCollidableObjects();
+
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
 
@@ -78,7 +85,7 @@ export class ZoneDisplay {
       //Obstacle Zone
       this.obstacleZone_width_px = this.environment.metersToPixels(this.obstacleZone_width_meters);
       this.obstacleZone_height_px = this.environment.metersToPixels(this.obstacleZone_height_meters);
-      
+
       //Construction Zone
       this.constructionZone_width_px = this.environment.metersToPixels(this.constructionZone_width_meters);
       this.constructionZone_height_px = this.environment.metersToPixels(this.constructionZone_height_meters);
@@ -91,6 +98,23 @@ export class ZoneDisplay {
       this.columnZone_width_px = this.environment.metersToPixels(this.columnZone_width_meters);
       this.columnZone_height_px = this.environment.metersToPixels(this.columnZone_height_meters);
     });
+  }
+
+//Initialize collidable objects in the environment
+  private initializeCollidableObjects() {
+    this.collidableObjects = [];
+
+    // Column Post
+    const columnPost = new CollidableObject({
+      x_meters: this.environment.environment_width_meters / 2,
+      y_meters: this.environment.environment_height_meters / 2,
+      shape: CollisionShape.RECTANGLE,
+      width_meters: this.columnZone_width_meters,
+      height_meters: this.columnZone_height_meters,
+      color: this.columnZone_color,
+      name: 'Column Post'
+    });
+    this.collidableObjects.push(columnPost);
   }
 
   update(p: p5) {}

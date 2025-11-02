@@ -61,7 +61,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   BoundingBox_OffsetX!: number; //rover center to box center
   BoundingBox_OffsetY!: number; //rover center to box center
   public showBoundingBox: boolean = true;
-  public bound_box_opacity: number = 0;
+  public bound_box_opacity: number = 50;
 
   // Rover State
   public x!: number;
@@ -213,7 +213,6 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.BoundingBox_Right = halfWidth;
     this.BoundingBox_Top = halfHeight;
     this.BoundingBox_Bottom = halfHeight;
-    this.bound_box_opacity = 0;
   }
 
   ngOnInit() {
@@ -317,6 +316,9 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.theta = this.normalizeAngle(this.theta);
     this.targetTheta = this.normalizeAngle(this.targetTheta);
 
+    // Get collidable objects from zone display
+    const collidableObjects = this.environment.zoneDisplay?.collidableObjects || [];
+
     this.collisionDetector.checkCollisions(
       this.centerX,
       this.centerY,
@@ -326,7 +328,8 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.BoundingBox_Right,
       this.BoundingBox_Top,
       this.BoundingBox_Bottom,
-      this.theta
+      this.theta,
+      collidableObjects  // Pass the collidable objects
     );
 
   }
