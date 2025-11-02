@@ -65,7 +65,7 @@ export class ZoneDisplay {
   public columnZone_height_meters: number = 0.75;
   public columnZone_width_px!: number;
   public columnZone_height_px!: number;
-  public columnZone_color: string = '#ff0000';
+  public columnZone_color: string = '#ffffff';
 
   ngOnInit() {
     // Initialize collidable objects
@@ -127,20 +127,6 @@ export class ZoneDisplay {
     p.strokeWeight(sw*.8);
     const strokeOffset = sw/2;
     const stroke_weight_comp = 1.25*sw;
-
-
-    //Column Post Zone
-    const color_pz = this.columnZone_color;
-    const rgb_pz = this.app.hexToRgb(color_pz) ?? { r: 0, g: 0, b: 0 };
-    const r_pz = rgb_pz.r;
-    const g_pz = rgb_pz.g;
-    const b_pz = rgb_pz.b;
-    const x_pos_pz = this.environment.environment_width_px/2 - this.columnZone_height_px/2;
-    const y_pos_pz =  this.environment.environment_height_px/2 - this.columnZone_width_px/2;
-
-    p.stroke(r_pz, g_pz, b_pz, 255/2);
-    p.fill(r_pz, g_pz, b_pz, 255/2);
-    p.rect(x_pos_pz, y_pos_pz, this.columnZone_width_px, this.columnZone_height_px, this.environment.environment_border_radius_px/2);
 
 
     //Target Berm Zone
@@ -210,6 +196,19 @@ export class ZoneDisplay {
     p.fill(r_sz, g_sz, b_sz, 50);
     p.rect(strokeOffset, strokeOffset + y_pos_sz, this.startingZone_width_px - stroke_weight_comp, this.startingZone_height_px , this.environment.environment_border_radius_px);
 
+
+    //Column Post Zone
+    const color_pz = this.columnZone_color;
+    const rgb_pz = this.app.hexToRgb(color_pz) ?? { r: 0, g: 0, b: 0 };
+    const r_pz = 150;
+    const g_pz = 150;
+    const b_pz = 150;
+    const x_pos_pz = this.environment.environment_width_px/2 - this.columnZone_height_px/2;
+    const y_pos_pz =  this.environment.environment_height_px/2 - this.columnZone_width_px/2;
+
+    p.stroke(r_pz, g_pz, b_pz, 255);
+    p.fill(255, 255, 255, 255);
+    p.rect(x_pos_pz, y_pos_pz, this.columnZone_width_px, this.columnZone_height_px, this.environment.environment_border_radius_px/2);
     
     p.pop();
   }

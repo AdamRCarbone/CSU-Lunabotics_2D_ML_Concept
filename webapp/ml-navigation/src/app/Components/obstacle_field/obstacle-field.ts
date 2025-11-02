@@ -30,7 +30,7 @@ export class ObstacleField implements OnInit, OnDestroy {
   public rockMaxRadius: number = 0.2;    // Max radius for rocks (0.4m diameter)
   public craterMinRadius: number = 0.15; // Min radius for craters (0.3m diameter)
   public craterMaxRadius: number = 0.25; // Max radius for craters (0.5m diameter)
-  public minSpacing: number = 0.75;       // Min spacing between obstacles (meters) - allows rover to pass
+  public minSpacing: number = 0.666;       // Min spacing between obstacles (meters) - allows rover to pass
 
   // Zone dimensions from zone-display (for determining allowed zones)
   private startingZone_width_meters: number = 2;
