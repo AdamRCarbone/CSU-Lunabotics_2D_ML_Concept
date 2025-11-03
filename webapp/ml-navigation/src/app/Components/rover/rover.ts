@@ -71,7 +71,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   private speed!: number;
   private _speedMultiplier: number = 0;
   private _targetSpeedFromSlider: number = 0; // Speed target (from slider input)
-  private turnSpeed: number = .25; // Degrees per frame
+  public turnSpeed: number = .25; // Degrees per frame
   private pressedKeys = new Set<string>();
   private speedThreshold: number = 0.1;
 
@@ -216,9 +216,11 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
-    // Initialize rover position
+    // Initialize rover position and rotation
     this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
     this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
+    this.theta = this.environment.rover_start_rotation;
+    this.targetTheta = this.environment.rover_start_rotation;
 
     // Initialize collision detector
     this.collisionDetector = new RoverCollisionDetector(this.ResetTrigger, this.environment);
@@ -250,13 +252,16 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   private resetRoverPosition() {
-    // Reset position to start position
+    // Randomize spawn position and rotation
+    this.environment.randomizeRoverSpawn();
+
+    // Reset position to new randomized start position
     this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
     this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
 
-    // Reset rotation
-    this.theta = 0;
-    this.targetTheta = 0;
+    // Reset rotation to new randomized angle
+    this.theta = this.environment.rover_start_rotation;
+    this.targetTheta = this.environment.rover_start_rotation;
 
     // Reset speed
     this._speedMultiplier = 0;
