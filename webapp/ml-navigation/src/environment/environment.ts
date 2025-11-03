@@ -31,6 +31,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public rover_start_x_meters: number = 0.5; // meters from left edge
   public rover_start_y_meters: number = 0.5; // meters from bottom edge
   public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)
+  public rover_start_rotation: number = 0; // initial rotation in degrees
 
   // ===== PIXEL-BASED PROPERTIES (FOR RENDERING) =====
   public environment_width_px!: number;
@@ -81,6 +82,28 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     return pixels * (this.environment_height_meters / this.environment_height_px);
   }
 
+  // Randomize rover spawn within starting zone (bottom-left)
+  randomizeRoverSpawn(): void {
+    // Reference zone dimensions directly from zone-display component
+    const startingZoneWidth = this.zoneDisplay.startingZone_width_meters;
+    const startingZoneHeight = this.zoneDisplay.startingZone_height_meters;
+    const padding = 0.4; // padding from edges to keep rover fully inside
+
+    // Random position within safe bounds
+    this.rover_start_x_meters = padding + Math.random() * (startingZoneWidth - 2 * padding);
+    this.rover_start_y_meters = padding + Math.random() * (startingZoneHeight - 2 * padding);
+
+    // Random rotation in increments of rover turnSpeed
+    const turnSpeed = this.rover.turnSpeed;
+    const maxIncrements = Math.floor(360 / turnSpeed);
+    const randomIncrements = Math.floor(Math.random() * maxIncrements);
+    this.rover_start_rotation = randomIncrements * turnSpeed;
+
+    // Update pixel coordinates
+    this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+    this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
+  }
+
   constructor(private windowSizeService: WindowSizeService) {
     // Initialize using current window size
     const { width, height } = this.windowSizeService.windowSizeSubject.getValue();
@@ -91,11 +114,18 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.cell_size_px = this.environment_height_px / this.grid_size;
     this.environment_border_radius_px = this.cell_size_px;
     this.environment_stroke_weight_px = this.cell_size_px / 2;
+
+    // Set initial pixel coordinates (will be randomized in ngOnInit)
+    this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+    this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
   }
 
   ngOnInit() {
+    // Randomize rover spawn position and rotation (ViewChild components available here)
+    this.randomizeRoverSpawn();
+
     // Subscribe to window size changes
-    this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
+    this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ height }) => {
 
       // Calculate pixel dimensions from meters
       this.cell_size_px = this.environment_height_px / this.grid_size;
@@ -105,14 +135,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.environment_width_px = (height * this.environment_width_meters / this.xy_scale_factor);
       this.environment_height_px = (height * this.environment_height_meters / this.xy_scale_factor);
 
-      
-      // Rover randomized positional start
-      const start_min_bound_x = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
-      const start_min_bound_y = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
-
-      this.rover_start_x_px = this.app.randomInRange(start_min_bound_x, start_min_bound_x + this.metersToPixels(2))
-      this.rover_start_y_px = this.app.randomInRange(start_min_bound_y, start_min_bound_x + this.metersToPixels(2))
-
+      // Convert meter-based starting position to pixel coordinates
+      this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+      this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
       // Resize the p5.js canvas (add extra space for stroke)
       if (this.p5Instance) {
