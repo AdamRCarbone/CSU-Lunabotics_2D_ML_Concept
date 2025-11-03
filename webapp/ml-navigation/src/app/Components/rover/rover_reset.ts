@@ -9,7 +9,7 @@ export class RoverCollisionDetector {
     private environment: EnvironmentComponent
   ) {}
 
-  //Check if rover collided with environment bounds and objects
+  //Check if rover collided with environment bounds or objects
   checkCollisions(
     roverCenterX: number,
     roverCenterY: number,
@@ -44,7 +44,7 @@ export class RoverCollisionDetector {
     }
   }
 
-  //Check if rover bounding box (with rotation) is touching or outside environment boundaries
+  // Check if rover bounding box (with rotation) is touching or outside environment bounds
   private checkEnvironmentBoundary(
     roverCenterX: number,
     roverCenterY: number,
@@ -157,7 +157,7 @@ export class RoverCollisionDetector {
   }
 
 
-  //Check if rover's bounding box collides with rect. object (uses SAT) for rotated rectangle vs axis-aligned rectangle
+  // Check if rover's bounding box collides with rect. object (uses SAT) for rotated rectangle vs axis-aligned rectangle
   private checkRectangularObjectCollision(
     roverCenterX: number,
     roverCenterY: number,
@@ -253,7 +253,5 @@ export class RoverCollisionDetector {
     // No separation found on any axis - collision detected
     return true;
   }
-
-  // Add more collision detection methods here as needed:
-  // private checkPolygonObjectCollision(...) { ... }
+  
 }

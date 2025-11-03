@@ -25,7 +25,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
   app = inject(App);
 
-  // ===== REAL-WORLD UNITS (METERS) =====
+  // REAL-WORLD UNITS (METERS)
   public environment_width_meters: number = 6.8;
   public environment_height_meters: number = 5;
   public rover_start_x_meters: number = 0.5; // meters from left edge
@@ -33,7 +33,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)
   public rover_start_rotation: number = 0; // initial rotation in degrees
 
-  // ===== PIXEL-BASED PROPERTIES (FOR RENDERING) =====
+  // PIXEL-BASED PROPERTIES (RENDERING)
   public environment_width_px!: number;
   public environment_height_px!: number;
   public cell_size_px!: number;
@@ -42,7 +42,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public rover_start_x_px!: number;
   public rover_start_y_px!: number;
 
-  // ===== GRID & SCALING =====
+  // GRID & SCALING
   public grid_size = 50; // Grid divisions for visualization
   public xy_scale_factor: number = 10; // Window height scaling factor
 
@@ -72,7 +72,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     return this.rover ? this.rover.currentSpeed : 0;
   }
 
-  // ===== CONVERSION UTILITIES =====
+  // CONVERSION FUNCTIONS
   // Centralized meter/pixel conversion functions
   metersToPixels(meters: number): number {
     return meters * (this.environment_height_px / this.environment_height_meters);
