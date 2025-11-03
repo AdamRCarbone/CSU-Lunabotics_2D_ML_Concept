@@ -62,7 +62,7 @@ export class ObstacleField implements OnInit, OnDestroy {
 
     // Generate rocks
     for (let i = 0; i < this.numRocks; i++) {
-      const radius = this.randomInRange(this.rockMinRadius, this.rockMaxRadius);
+      const radius = this.app.randomInRange(this.rockMinRadius, this.rockMaxRadius);
       const position = this.findValidPosition(radius, maxAttempts);
 
       if (position) {
@@ -80,7 +80,7 @@ export class ObstacleField implements OnInit, OnDestroy {
 
     // Generate craters
     for (let i = 0; i < this.numCraters; i++) {
-      const radius = this.randomInRange(this.craterMinRadius, this.craterMaxRadius);
+      const radius = this.app.randomInRange(this.craterMinRadius, this.craterMaxRadius);
       const position = this.findValidPosition(radius, maxAttempts);
 
       if (position) {
@@ -101,8 +101,8 @@ export class ObstacleField implements OnInit, OnDestroy {
   private findValidPosition(radius: number, maxAttempts: number): { x: number, y: number } | null {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // Generate random position in environment
-      const x = this.randomInRange(radius, this.environment.environment_width_meters - radius);
-      const y = this.randomInRange(radius, this.environment.environment_height_meters - radius);
+      const x = this.app.randomInRange(radius, this.environment.environment_width_meters - radius);
+      const y = this.app.randomInRange(radius, this.environment.environment_height_meters - radius);
 
       // Check if position is in allowed zones
       if (!this.isInAllowedZone(x, y)) {
@@ -164,11 +164,6 @@ export class ObstacleField implements OnInit, OnDestroy {
     }
 
     return false; // No overlap
-  }
-
-  // Generate random number in range
-  private randomInRange(min: number, max: number): number {
-    return min + Math.random() * (max - min);
   }
 
   update(p: p5) {

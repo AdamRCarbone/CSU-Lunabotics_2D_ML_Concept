@@ -111,6 +111,11 @@ export class App implements AfterViewInit {
   return { r, g, b };
 }
 
+  // Generate random number in range
+  public randomInRange(min: number, max: number): number {
+    return min + Math.random() * (max - min);
+  }
+
   @HostListener('window:resize', ['$event'])
   onResize(event: Event) {
     this.window_width = window.innerWidth;

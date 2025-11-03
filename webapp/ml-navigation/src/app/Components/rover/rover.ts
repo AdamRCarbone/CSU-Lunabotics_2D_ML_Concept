@@ -19,7 +19,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   private resetSubscription!: Subscription;
   private collisionDetector!: RoverCollisionDetector;
   environment = inject(EnvironmentComponent);
-  App = inject(App);
+  app = inject(App);
   ResetTrigger = inject(ResetTrigger);
 
   // Properties
@@ -251,9 +251,9 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   private resetRoverPosition() {
     // Reset position to start position
-    this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
-    this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
-
+      this.x = this.environment.rover_start_x_px - this.Rover_Origin_X;
+      this.y = this.environment.rover_start_y_px - this.Rover_Origin_Y;
+  
     // Reset rotation
     this.theta = 0;
     this.targetTheta = 0;

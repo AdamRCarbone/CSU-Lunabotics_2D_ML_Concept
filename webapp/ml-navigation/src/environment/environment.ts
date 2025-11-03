@@ -1,9 +1,10 @@
 // src/app/environment/environment.component.ts
-import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect, forwardRef } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect, forwardRef, inject } from '@angular/core';
 import { RoverComponent } from '../app/Components/rover/rover';
 import { WindowSizeService } from '../app/services/window-size';
 import p5 from 'p5';
 import { Subscription } from 'rxjs';
+import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 
@@ -22,6 +23,7 @@ import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 export class EnvironmentComponent implements OnInit, OnDestroy {
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
+  app = inject(App);
 
   // ===== REAL-WORLD UNITS (METERS) =====
   public environment_width_meters: number = 6.8;
@@ -89,10 +91,6 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.cell_size_px = this.environment_height_px / this.grid_size;
     this.environment_border_radius_px = this.cell_size_px;
     this.environment_stroke_weight_px = this.cell_size_px / 2;
-
-    // Convert meter starting pos to pixel coordinates
-    this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
-    this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
   }
 
   ngOnInit() {
@@ -107,9 +105,14 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.environment_width_px = (height * this.environment_width_meters / this.xy_scale_factor);
       this.environment_height_px = (height * this.environment_height_meters / this.xy_scale_factor);
 
-      // Convert meter-based starting position to pixel coordinates
-      this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
-      this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
+      
+      // Rover randomized positional start
+      const start_min_bound_x = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
+      const start_min_bound_y = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
+
+      this.rover_start_x_px = this.app.randomInRange(start_min_bound_x, start_min_bound_x + this.metersToPixels(2))
+      this.rover_start_y_px = this.app.randomInRange(start_min_bound_y, start_min_bound_x + this.metersToPixels(2))
+
 
       // Resize the p5.js canvas (add extra space for stroke)
       if (this.p5Instance) {
