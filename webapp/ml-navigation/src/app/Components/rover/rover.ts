@@ -73,8 +73,9 @@ export class RoverComponent implements OnInit, OnDestroy {
   private speedThreshold: number = 0.1;
 
   // Physics properties
-  private maxSpeed: number = .25; // Max speed in physics units
-  private maxAngularSpeed: number = .005; // Max angular velocity
+  public YOLO = 10; //Set to 1 for normal speed
+  private maxSpeed: number = .25 * this.YOLO; // Max speed in physics units
+  private maxAngularSpeed: number = .005 * this.YOLO; // Max angular velocity
 
   // Zone tracking
   public currentZone: Zone = Zone.NONE;
@@ -107,14 +108,15 @@ export class RoverComponent implements OnInit, OnDestroy {
   }
 
   set targetHeading(value: number) {
-    this.targetTheta = value;
+    this.targetTheta = this.normalizeAngle(value);
   }
 
   get currentHeading(): number {
     if (!this.physicsBody) return 0;
     const angleDegrees = this.physicsBody.angle * 180 / Math.PI;
+    const normalized = this.normalizeAngle(angleDegrees);
     // Round to nearest turnSpeed increment
-    return Math.round(angleDegrees / this.turnSpeed) * this.turnSpeed;
+    return Math.round(normalized / this.turnSpeed) * this.turnSpeed;
   }
 
   constructor(private windowSizeService: WindowSizeService) {
