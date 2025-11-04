@@ -311,6 +311,9 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.environment.rover_start_rotation
     );
 
+    // Re-setup physics obstacles with newly regenerated positions
+    this.setupPhysicsObstacles();
+
     // Reset speed and target
     this._speedMultiplier = 0;
     this._targetSpeedFromSlider = 0;
