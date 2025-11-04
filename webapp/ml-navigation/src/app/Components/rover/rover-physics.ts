@@ -1,4 +1,4 @@
-// src/app/Components/rover/rover.ts
+// src/app/Components/rover/rover-physics.ts
 import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { WindowSizeService } from '../../services/window-size';
 import { Subscription } from 'rxjs';
@@ -14,7 +14,7 @@ import { Body } from 'matter-js';
   template: '', // rendering handled by p5
   styleUrls: ['./rover.css']
 })
-export class RoverComponent implements OnInit, OnDestroy {
+export class RoverPhysicsComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
   private resetSubscription!: Subscription;
   private physicsBody!: Body;
@@ -22,7 +22,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   app = inject(App);
   ResetTrigger = inject(ResetTrigger);
 
-  // Properties
+  // Visual Properties (for rendering)
   window_width!: number;
   window_height!: number;
   grid_size: number = this.environment.grid_size;
@@ -32,44 +32,22 @@ export class RoverComponent implements OnInit, OnDestroy {
   Rover_Width!: number;
   Rover_Height!: number;
   Rover_Radius!: number;
-  Rover_Origin_X!: number;
-  Rover_Origin_Y!: number;
+
+  // Wheel and bucket dimensions for rendering
   Wheel_Width!: number;
   Wheel_Height!: number;
-  Wheel_Left_X!: number;
-  Wheel_Right_X!: number;
-  Wheel_Front_Y!: number;
-  Wheel_Middle_Y!: number;
-  Wheel_Back_Y!: number;
   Bucket_Width!: number;
   Bucket_Height!: number;
-  Bucket_X!: number;
-  Bucket_Y!: number;
   Bucket_Top_Radius!: number;
   Bucket_Bottom_Radius!: number;
-  Bucket_Arm_Width!: number;
-  Bucket_Arm_Height!: number;
-  Bucket_Arm_Left_X!: number;
-  Bucket_Arm_Right_X!: number;
-  Bucket_Arm_Y!: number;
 
-  // Bounding Box
-  BoundingBox_Left!: number;   // Distance from center to left edge
-  BoundingBox_Right!: number;  // Distance from center to right edge
-  BoundingBox_Top!: number;    // Distance from center to top edge
-  BoundingBox_Bottom!: number; // Distance from center to bottom edge
-  BoundingBox_OffsetX!: number; //rover center to box center
-  BoundingBox_OffsetY!: number; //rover center to box center
-  public showBoundingBox: boolean = false;
-  public bound_box_opacity: number = 255;
-
-  // Rover State
-  private targetTheta: number = 0; // Target angle (from slider input)
+  // Movement properties
   private _speedMultiplier: number = 0;
-  private _targetSpeedFromSlider: number = 0; // Speed target (from slider input)
+  private _targetSpeedFromSlider: number = 0;
   public turnSpeed: number = .25; // Degrees per frame
   private pressedKeys = new Set<string>();
   private speedThreshold: number = 0.1;
+  private targetTheta: number = 0;
 
   // Physics properties
   private maxSpeed: number = 2; // Max speed in physics units
@@ -86,12 +64,6 @@ export class RoverComponent implements OnInit, OnDestroy {
     if (!isKeyOverride) {
       this._speedMultiplier = value;
     }
-  }
-
-
-  private normalizeAngle(angle: number): number {
-    angle = angle % 360;
-    return angle < 0 ? angle + 360 : angle;
   }
 
   get speedMultiplier(): number {
@@ -116,10 +88,6 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.updateProperties(height);
   }
 
-  private clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v));
-}
-
   private updateProperties(windowHeight: number) {
     // scaling using environment dimensions
     this.window_width = this.environment.environment_width_px;
@@ -132,73 +100,20 @@ export class RoverComponent implements OnInit, OnDestroy {
     // 3:5 width:height ratio
     this.Rover_Width = this.Rover_Height * 0.6;
 
-    // Scale properties proportionally
-    const heightScale = this.Rover_Height / 5; // Base scale factor (original was 5 cells)
+    // Scale visual properties
+    const heightScale = this.Rover_Height / 5;
     this.Rover_Stroke_Thickness = 0.25 * heightScale;
     this.Rover_Radius = 0.5 * heightScale;
-    this.Rover_Origin_X = this.Rover_Width / 2;
-    this.Rover_Origin_Y = this.Rover_Height / 2;
 
-    // Wheel Properties
+    // Wheel Properties (for rendering)
     this.Wheel_Width = this.Rover_Width / 4;
     this.Wheel_Height = this.Rover_Height / 4;
-    this.Wheel_Left_X = -(3 / 4) * this.Rover_Width;
-    this.Wheel_Right_X = (1 / 2) * this.Rover_Width;
-    this.Wheel_Front_Y = -this.Rover_Height / 2;
-    this.Wheel_Middle_Y = -this.Rover_Height / 8;
-    this.Wheel_Back_Y = this.Rover_Height / 4;
 
-    // Bucket Properties
+    // Bucket Properties (for rendering)
     this.Bucket_Width = this.Rover_Width * 1.375;
     this.Bucket_Height = this.Rover_Height / 5;
-    this.Bucket_X = -this.Bucket_Width / 2;
-    this.Bucket_Y = -this.Rover_Height / 1.25;
     this.Bucket_Top_Radius = this.Rover_Radius / 4;
     this.Bucket_Bottom_Radius = this.Rover_Radius * 1.5;
-    this.Bucket_Arm_Width = this.Bucket_Height / 2.5;
-    this.Bucket_Arm_Height = this.Bucket_Height * 1.5;
-    this.Bucket_Arm_Left_X = -this.Bucket_Width / 5;
-    this.Bucket_Arm_Right_X = -this.Bucket_Arm_Left_X - this.Bucket_Arm_Width;
-    this.Bucket_Arm_Y = -this.Rover_Height / 2 - this.Bucket_Arm_Height / 1.5;
-
-    // Calculate bounding box that encompasses all visual elements
-    this.calculateBoundingBox();
-  }
-
-  private calculateBoundingBox() {
-    // Collect all edges to find extremes
-    const allX = [
-      -this.Rover_Width / 2, this.Rover_Width / 2,
-      this.Wheel_Left_X, this.Wheel_Left_X + this.Wheel_Width,
-      this.Wheel_Right_X, this.Wheel_Right_X + this.Wheel_Width,
-      this.Bucket_X, this.Bucket_X + this.Bucket_Width,
-      this.Bucket_Arm_Left_X, this.Bucket_Arm_Left_X + this.Bucket_Arm_Width,
-      this.Bucket_Arm_Right_X, this.Bucket_Arm_Right_X + this.Bucket_Arm_Width
-    ];
-
-    const allY = [
-      -this.Rover_Height / 2, this.Rover_Height / 2,
-      this.Wheel_Front_Y, this.Wheel_Back_Y + this.Wheel_Height,
-      this.Bucket_Y, this.Bucket_Y + this.Bucket_Height,
-      this.Bucket_Arm_Y, this.Bucket_Arm_Y + this.Bucket_Arm_Height
-    ];
-
-    const minX = Math.min(...allX);
-    const maxX = Math.max(...allX);
-    const minY = Math.min(...allY);
-    const maxY = Math.max(...allY);
-
-    // Calculate offset and half-extents
-    this.BoundingBox_OffsetX = (minX + maxX) / 2;
-    this.BoundingBox_OffsetY = (minY + maxY) / 2;
-
-    const halfWidth = (maxX - minX) / 2;
-    const halfHeight = (maxY - minY) / 2;
-
-    this.BoundingBox_Left = halfWidth;
-    this.BoundingBox_Right = halfWidth;
-    this.BoundingBox_Top = halfHeight;
-    this.BoundingBox_Bottom = halfHeight;
   }
 
   ngOnInit() {
@@ -222,8 +137,8 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.environment.environment_height_px
     );
 
-    // Set initial target
-    this.targetTheta = this.environment.rover_start_rotation;
+    // Add obstacles from obstacle field and zone display
+    this.setupPhysicsObstacles();
 
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ width, height }) => {
@@ -233,6 +148,35 @@ export class RoverComponent implements OnInit, OnDestroy {
     // Subscribe to reset trigger
     this.resetSubscription = this.ResetTrigger.reset$.subscribe(() => {
       this.resetRoverPosition();
+    });
+  }
+
+  private setupPhysicsObstacles() {
+    // Get obstacles from obstacle field
+    const obstacles = this.environment.obstacleField?.collidableObjects || [];
+    obstacles.forEach(obstacle => {
+      if (obstacle.type === 'rock' || obstacle.type === 'crater') {
+        this.environment.physicsEngine.addObstacle(
+          obstacle.x,
+          obstacle.y,
+          obstacle.radius,
+          obstacle.type
+        );
+      }
+    });
+
+    // Get column post from zone display
+    const zoneObjects = this.environment.zoneDisplay?.collidableObjects || [];
+    zoneObjects.forEach(obj => {
+      if (obj.type === 'rectangle') {
+        this.environment.physicsEngine.addRectangleObstacle(
+          obj.x,
+          obj.y,
+          obj.width,
+          obj.height,
+          'column'
+        );
+      }
     });
   }
 
@@ -247,7 +191,7 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.environment.rover_start_rotation
     );
 
-    // Reset speed and target
+    // Reset speed
     this._speedMultiplier = 0;
     this._targetSpeedFromSlider = 0;
     this.targetTheta = this.environment.rover_start_rotation;
@@ -309,15 +253,15 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     // Apply angular velocity
     this.environment.physicsEngine.setRoverAngularVelocity(angularVelocity);
+
+    // Check for collisions (physics engine handles this internally)
+    // If collision occurs, it will trigger reset through collision handler
   }
 
   draw(p: p5) {
     if (!this.physicsBody) return;
 
-    const state = this.environment.physicsEngine.getRoverState();
-    if (!state) return;
-
-    const { x, y, angle } = state;
+    const { x, y, angle } = this.environment.physicsEngine.getRoverState()!;
 
     p.push();
     p.translate(x, y);
@@ -327,39 +271,31 @@ export class RoverComponent implements OnInit, OnDestroy {
     p.fill(100, 100, 100);
     p.strokeWeight(this.Rover_Stroke_Thickness);
     p.stroke(this.Rover_Stroke_Color);
-    p.rect(-this.Rover_Width / 2, -this.Rover_Height / 2, this.Rover_Width, this.Rover_Height, this.Rover_Radius);
+    p.rectMode(p.CENTER);
+    p.rect(0, 0, this.Rover_Width, this.Rover_Height, this.Rover_Radius);
 
-    // Wheels
+    // Simplified wheel rendering
     p.fill(25, 25, 25);
-    p.strokeWeight(this.Rover_Stroke_Thickness);
-    p.stroke(this.Rover_Stroke_Color);
-    p.rect(this.Wheel_Left_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Left_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Left_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+    const wheelOffsetX = this.Rover_Width * 0.4;
+    const wheelOffsetY = this.Rover_Height * 0.35;
 
-    // Front Digging Bucket
+    // Left wheels
+    p.rect(-wheelOffsetX, -wheelOffsetY, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+    p.rect(-wheelOffsetX, 0, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+    p.rect(-wheelOffsetX, wheelOffsetY, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+
+    // Right wheels
+    p.rect(wheelOffsetX, -wheelOffsetY, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+    p.rect(wheelOffsetX, 0, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+    p.rect(wheelOffsetX, wheelOffsetY, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
+
+    // Front Bucket
     p.fill(150, 150, 150);
-    p.strokeWeight(this.Rover_Stroke_Thickness);
-    p.stroke(this.Rover_Stroke_Color);
-    p.rect(this.Bucket_Arm_Left_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
-    p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
-    p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
+    p.rect(0, -this.Rover_Height * 0.7, this.Bucket_Width, this.Bucket_Height,
+           this.Bucket_Top_Radius, this.Bucket_Top_Radius,
+           this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
 
-    // Draw bounding box if enabled
-    if (this.showBoundingBox) {
-      p.stroke(255, 0, 0, this.bound_box_opacity);
-      p.strokeWeight(2);
-      p.noFill();
-      p.rectMode(p.CENTER);
-      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
-      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
-      // Draw at offset position (bounding box center offset from rover body center)
-      p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
-      p.rectMode(p.CORNER); // Reset to default
-    }
+    p.rectMode(p.CORNER); // Reset to default
 
     p.pop();
   }
