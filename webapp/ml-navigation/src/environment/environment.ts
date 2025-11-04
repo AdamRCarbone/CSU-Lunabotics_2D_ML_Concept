@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
+import { PhysicsEngine } from '../app/physics/physics-engine';
 
 @Component({
   selector: 'app-environment',
@@ -23,6 +24,7 @@ import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 export class EnvironmentComponent implements OnInit, OnDestroy {
   private p5Instance!: p5;
   private windowSizeSubscription!: Subscription;
+  public physicsEngine!: PhysicsEngine;
   app = inject(App);
 
   // REAL-WORLD UNITS (METERS)
@@ -121,6 +123,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    // Initialize physics engine
+    this.physicsEngine = new PhysicsEngine();
+
     // Randomize rover spawn position and rotation (ViewChild components available here)
     this.randomizeRoverSpawn();
 
@@ -168,6 +173,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         // Draw at full dimensions - stroke will extend outside (centered on edge)
         p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
 
+        // Update physics engine
+        this.physicsEngine.update();
+
         this.zoneDisplay.update(p);    // Update zone display
         this.zoneDisplay.draw(p);      // Render zone display
 
@@ -199,6 +207,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     }
     if (this.windowSizeSubscription) {
       this.windowSizeSubscription.unsubscribe();
+    }
+    if (this.physicsEngine) {
+      this.physicsEngine.destroy();
     }
   }
 }
