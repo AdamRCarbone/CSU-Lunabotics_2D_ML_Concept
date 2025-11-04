@@ -262,7 +262,6 @@ export class RoverComponent implements OnInit, OnDestroy {
 
       // Get obstacles from obstacle field
       const obstacles = this.environment.obstacleField?.collidableObjects || [];
-      console.log('Adding obstacles to physics:', obstacles.length);
 
       obstacles.forEach(obstacle => {
         // Convert from meters to pixels (x_meters is distance from left, y_meters from bottom)
@@ -273,14 +272,12 @@ export class RoverComponent implements OnInit, OnDestroy {
           const radius = this.environment.metersToPixels(obstacle.radius_meters);
           const label = obstacle.name?.toLowerCase().includes('crater') ? 'crater' :
                        obstacle.name?.toLowerCase().includes('rock') ? 'rock' : 'obstacle';
-          console.log(`Adding ${label} at (${x}, ${y}) with radius ${radius}`);
           this.environment.physicsEngine.addObstacle(x, y, radius, label);
         }
       });
 
       // Get column post from zone display
       const zoneObjects = this.environment.zoneDisplay?.collidableObjects || [];
-      console.log('Adding zone objects to physics:', zoneObjects.length);
 
       zoneObjects.forEach(obj => {
         if (obj.isRectangular() && obj.width_meters && obj.height_meters) {
@@ -289,7 +286,6 @@ export class RoverComponent implements OnInit, OnDestroy {
           const y = this.environment.environment_height_px - ((obj.y_meters / this.environment.environment_height_meters) * this.environment.environment_height_px);
           const width = this.environment.metersToPixels(obj.width_meters);
           const height = this.environment.metersToPixels(obj.height_meters);
-          console.log(`Adding column at (${x}, ${y}) with size ${width}x${height}`);
           this.environment.physicsEngine.addRectangleObstacle(x, y, width, height, 'column');
         }
       });

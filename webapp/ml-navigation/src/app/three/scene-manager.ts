@@ -261,8 +261,6 @@ export class SceneManager {
 
   // Create an obstacle (rock or crater)
   createObstacle(x: number, y: number, radius: number, type: 'rock' | 'crater'): THREE.Mesh {
-    console.log('Creating obstacle in scene:', { x, y, radius, type });
-
     const geometry = new THREE.CircleGeometry(radius, 32);
     const color = type === 'rock' ? 0x6b6b6b : 0x141414; // Gray for rocks, dark for craters (matching p5)
     const material = new THREE.MeshBasicMaterial({
@@ -273,14 +271,11 @@ export class SceneManager {
     obstacle.position.set(x, y, 0.3); // Above zones but below rover
 
     this.obstaclesGroup.add(obstacle);
-    console.log('Obstacle added. Total obstacles:', this.obstaclesGroup.children.length);
     return obstacle;
   }
 
   // Create a zone (rectangular area with rounded corners)
   createZone(x: number, y: number, width: number, height: number, color: number, opacity: number = 0.3): THREE.Mesh {
-    console.log('Creating zone:', { x, y, width, height, color: color.toString(16), opacity });
-
     const radius = this.environmentHeight / 50; // Same radius as environment border
     const shape = this.createRoundedRectShape(0, 0, width, height, radius);
     const geometry = new THREE.ShapeGeometry(shape);
@@ -294,7 +289,6 @@ export class SceneManager {
     zone.position.set(x, y, 0.1); // Just above background
 
     this.zonesGroup.add(zone);
-    console.log('Zone added to group. Total zones:', this.zonesGroup.children.length);
     return zone;
   }
 
@@ -334,16 +328,6 @@ export class SceneManager {
   // Render the scene
   render() {
     this.renderer.render(this.scene, this.camera);
-
-    // Debug: Log scene contents periodically
-    if (Math.random() < 0.01) { // 1% chance each frame
-      console.log('Scene contents:', {
-        environment: this.environmentGroup.children.length,
-        zones: this.zonesGroup.children.length,
-        obstacles: this.obstaclesGroup.children.length,
-        rover: this.roverGroup.children.length
-      });
-    }
   }
 
   // Start animation loop

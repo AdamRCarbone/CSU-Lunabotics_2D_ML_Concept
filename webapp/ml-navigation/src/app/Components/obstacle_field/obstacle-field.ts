@@ -173,8 +173,6 @@ export class ObstacleField implements OnInit, OnDestroy {
   initializeThree(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
 
-    console.log('Initializing obstacles, count:', this.collidableObjects.length);
-
     // Clear existing meshes
     this.obstacleMeshes.forEach(mesh => {
       if (mesh.parent) mesh.parent.remove(mesh);
@@ -186,8 +184,6 @@ export class ObstacleField implements OnInit, OnDestroy {
     // Create Three.js meshes for all obstacles
     for (const obj of this.collidableObjects) {
       if (!obj.isCircular() || !obj.radius_meters) continue;
-
-      console.log('Creating obstacle:', obj.name, 'at', obj.x_meters, obj.y_meters, 'radius:', obj.radius_meters);
 
       // Convert meters to pixels (y_meters is from bottom, so we need to invert)
       const x_px = (obj.x_meters / this.environment.environment_width_meters) * this.environment.environment_width_px;

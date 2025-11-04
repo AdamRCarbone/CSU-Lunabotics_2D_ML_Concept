@@ -229,8 +229,12 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.zoneDisplay.initializeThree(this.sceneManager);
     }
 
-    // Initialize obstacles
+    // Initialize obstacles - regenerate them to ensure they exist
     if (this.obstacleField) {
+      // Regenerate obstacles if array is empty
+      if (this.obstacleField.collidableObjects.length === 0) {
+        (this.obstacleField as any).generateObstacles();
+      }
       this.obstacleField.initializeThree(this.sceneManager);
     }
 

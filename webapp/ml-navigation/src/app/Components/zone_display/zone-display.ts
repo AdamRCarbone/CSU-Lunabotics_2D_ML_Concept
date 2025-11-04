@@ -141,12 +141,6 @@ export class ZoneDisplay {
       this.columnZone_height_px = this.environment.metersToPixels(this.columnZone_height_meters);
     }
 
-    console.log('Initializing zones with dimensions:', {
-      starting: { w: this.startingZone_width_px, h: this.startingZone_height_px },
-      excavation: { w: this.excavationZone_width_px, h: this.excavationZone_height_px },
-      environment: { w: this.environment.environment_width_px, h: this.environment.environment_height_px }
-    });
-
     // Clear existing meshes
     this.zoneMeshes.forEach(mesh => {
       if (mesh.parent) mesh.parent.remove(mesh);
