@@ -6,6 +6,7 @@ import { WindowSizeService } from '../../../app/services/window-size';
 import { App } from '../../app';
 import { CollidableObject, CollisionShape } from '../collidable-object/collidable-object';
 import { ZONE_COLORS } from '../zone-legend/zone-legend';
+import { Zone } from '../../enums/zone.enum';
 
 
 @Component({
@@ -68,6 +69,10 @@ export class ZoneDisplay {
   public columnZone_height_px!: number;
   public columnZone_color: string = ZONE_COLORS.columnPostZone;
 
+  // Zone detection
+  public currentZone: Zone = Zone.NONE;
+  public previousZone: Zone = Zone.NONE;
+
   ngOnInit() {
     // Initialize collidable objects
     this.initializeCollidableObjects();
@@ -118,7 +123,71 @@ export class ZoneDisplay {
     this.collidableObjects.push(columnPost);
   }
 
-  update(p: p5) {}
+  // Detect rover's current zone
+  detectRoverZone(roverX_meters: number, roverY_meters: number): Zone {
+    // Check Starting Zone (bottom-left, 2x2m)
+    if (roverX_meters <= this.startingZone_width_meters &&
+        roverY_meters <= this.startingZone_height_meters) {
+      return Zone.STARTING;
+    }
+
+    // Check Construction Zone (bottom-right, 3m wide x 1.5m tall)
+    const constructionZoneLeft = this.environment.environment_width_meters - this.constructionZone_width_meters;
+    if (roverX_meters >= constructionZoneLeft &&
+        roverY_meters <= this.constructionZone_height_meters) {
+
+      // Check Target Berm Zone (within construction zone)
+      const targetBermLeft = this.environment.environment_width_meters - this.constructionZone_width_meters/2 - this.targetbermZone_width_meters/2;
+      const targetBermRight = targetBermLeft + this.targetbermZone_width_meters;
+      const targetBermBottom = this.constructionZone_height_meters/8;
+      const targetBermTop = targetBermBottom + this.targetbermZone_height_meters;
+
+      if (roverX_meters >= targetBermLeft && roverX_meters <= targetBermRight &&
+          roverY_meters >= targetBermBottom && roverY_meters <= targetBermTop) {
+        return Zone.TARGET_BERM;
+      }
+
+      return Zone.CONSTRUCTION;
+    }
+
+    // Check Excavation Zone (left side, 2.5m wide)
+    if (roverX_meters <= this.excavationZone_width_meters) {
+      return Zone.EXCAVATION;
+    }
+
+    // Check Obstacle Zone (right side, 4.38m wide)
+    const obstacleZoneLeft = this.environment.environment_width_meters - this.obstacleZone_width_meters;
+    if (roverX_meters >= obstacleZoneLeft) {
+      return Zone.OBSTACLE;
+    }
+
+    // Not in any specific zone
+    return Zone.NONE;
+  }
+
+  update(p: p5) {
+    // Get rover position
+    if (this.environment.rover) {
+      const roverState = this.environment.physicsEngine.getRoverState();
+      if (roverState) {
+        // Convert rover position from pixels to meters
+        const roverX_meters = this.environment.pixelsToMeters(roverState.x);
+        const roverY_meters = this.environment.pixelsToMeters(this.environment.environment_height_px - roverState.y);
+
+        // Detect current zone
+        this.previousZone = this.currentZone;
+        this.currentZone = this.detectRoverZone(roverX_meters, roverY_meters);
+
+        // Update rover's currentZone property
+        this.environment.rover.currentZone = this.currentZone;
+
+        // Log zone changes
+        if (this.currentZone !== this.previousZone) {
+          console.log(`Rover entered zone: ${this.currentZone}`);
+        }
+      }
+    }
+  }
 
   draw(p: p5) {
     p.push();
@@ -210,7 +279,7 @@ export class ZoneDisplay {
     p.stroke(r_pz, g_pz, b_pz, 255);
     p.fill(255, 255, 255, 255);
     p.rect(x_pos_pz, y_pos_pz, this.columnZone_width_px, this.columnZone_height_px, this.environment.environment_border_radius_px/2);
-    
+
     p.pop();
   }
 }

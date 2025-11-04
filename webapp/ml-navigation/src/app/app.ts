@@ -6,6 +6,7 @@ import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
 import { ParameterDisplay, Parameter } from "./Components/parameter_display/parameter-display";
 import { ZoneLegend } from './Components/zone-legend/zone-legend';
+import { Zone } from './enums/zone.enum';
 
 @Component({
   selector: 'app-root',
@@ -29,6 +30,7 @@ export class App implements AfterViewInit {
     { name: 'y', value: '—' }
   ];
   public positionParams_sigfig: number = 3;
+  public currentZone: Zone = Zone.NONE;
 
   constructor(
     private windowSizeService: WindowSizeService,
@@ -99,6 +101,8 @@ export class App implements AfterViewInit {
             // Update position parameters
             if (this.environment.rover) {
               this.updateRoverPosition();
+              // Update current zone
+              this.currentZone = this.environment.currentZone;
               this.cdr.markForCheck();
             }
           });

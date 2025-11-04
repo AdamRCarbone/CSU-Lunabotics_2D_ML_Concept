@@ -8,6 +8,7 @@ import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 import { PhysicsEngine } from '../app/physics/physics-engine';
+import { Zone } from '../app/enums/zone.enum';
 
 @Component({
   selector: 'app-environment',
@@ -74,8 +75,11 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     return this.rover ? this.rover.currentSpeed : 0;
   }
 
-  // CONVERSION FUNCTIONS
-  // Centralized meter/pixel conversion functions
+  get currentZone(): Zone {
+    return this.zoneDisplay ? this.zoneDisplay.currentZone : Zone.NONE;
+  }
+
+  // Meter/pixel conversion
   metersToPixels(meters: number): number {
     return meters * (this.environment_height_px / this.environment_height_meters);
   }
@@ -84,9 +88,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     return pixels * (this.environment_height_meters / this.environment_height_px);
   }
 
-  // Randomize rover spawn within starting zone (bottom-left)
+  // Randomize rover spawn within starting zone
   randomizeRoverSpawn(): void {
-    // Reference zone dimensions directly from zone-display component
+    // Zone dimensions from zone-display component
     const startingZoneWidth = this.zoneDisplay.startingZone_width_meters;
     const startingZoneHeight = this.zoneDisplay.startingZone_height_meters;
     const padding = 0.4; // padding from edges to keep rover fully inside
@@ -126,7 +130,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     // Initialize physics engine
     this.physicsEngine = new PhysicsEngine();
 
-    // Randomize rover spawn position and rotation (ViewChild components available here)
+    // Randomize rover spawn position and rotation
     this.randomizeRoverSpawn();
 
     // Subscribe to window size changes
