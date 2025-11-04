@@ -60,7 +60,7 @@ export class RoverComponent implements OnInit, OnDestroy {
   BoundingBox_Bottom!: number; // Distance from center to bottom edge
   BoundingBox_OffsetX!: number; //rover center to box center
   BoundingBox_OffsetY!: number; //rover center to box center
-  public showBoundingBox: boolean = false;
+  public showBoundingBox: boolean = true;
   public bound_box_opacity: number = 255;
 
   // Rover State
@@ -108,7 +108,9 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   get currentHeading(): number {
     if (!this.physicsBody) return 0;
-    return this.physicsBody.angle * 180 / Math.PI;
+    const angleDegrees = this.physicsBody.angle * 180 / Math.PI;
+    // Round to nearest turnSpeed increment
+    return Math.round(angleDegrees / this.turnSpeed) * this.turnSpeed;
   }
 
   constructor(private windowSizeService: WindowSizeService) {
@@ -207,12 +209,16 @@ export class RoverComponent implements OnInit, OnDestroy {
     const startY = this.environment.rover_start_y_px;
     const rotation = this.environment.rover_start_rotation;
 
-    // Create rover in physics engine
+    // Calculate actual bounding box size (including bucket and arms)
+    const boundingWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
+    const boundingHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
+
+    // Create rover in physics engine with proper bounding box
     this.physicsBody = this.environment.physicsEngine.createRover(
       startX,
       startY,
-      this.Rover_Width * 1.2, // Slightly larger for collision
-      this.Rover_Height * 1.2,
+      boundingWidth,
+      boundingHeight,
       rotation
     );
 
@@ -221,6 +227,14 @@ export class RoverComponent implements OnInit, OnDestroy {
       this.environment.environment_width_px,
       this.environment.environment_height_px
     );
+
+    // Add obstacles from obstacle field and zone display
+    this.setupPhysicsObstacles();
+
+    // Set collision callback to trigger reset
+    this.environment.physicsEngine.setCollisionCallback(() => {
+      this.ResetTrigger.triggerReset();
+    });
 
     // Set initial target
     this.targetTheta = this.environment.rover_start_rotation;
@@ -234,6 +248,36 @@ export class RoverComponent implements OnInit, OnDestroy {
     this.resetSubscription = this.ResetTrigger.reset$.subscribe(() => {
       this.resetRoverPosition();
     });
+  }
+
+  private setupPhysicsObstacles() {
+    // Wait for components to be initialized
+    setTimeout(() => {
+      // Get obstacles from obstacle field
+      const obstacles = this.environment.obstacleField?.collidableObjects || [];
+      obstacles.forEach(obstacle => {
+        // Convert from meters to pixels
+        const x = this.environment.metersToPixels(obstacle.x_meters);
+        const y = this.environment.environment_height_px - this.environment.metersToPixels(obstacle.y_meters);
+
+        if (obstacle.isCircular() && obstacle.radius_meters) {
+          const radius = this.environment.metersToPixels(obstacle.radius_meters);
+          this.environment.physicsEngine.addObstacle(x, y, radius, obstacle.name || 'obstacle');
+        }
+      });
+
+      // Get column post from zone display
+      const zoneObjects = this.environment.zoneDisplay?.collidableObjects || [];
+      zoneObjects.forEach(obj => {
+        if (obj.isRectangular() && obj.width_meters && obj.height_meters) {
+          const x = this.environment.metersToPixels(obj.x_meters);
+          const y = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters);
+          const width = this.environment.metersToPixels(obj.width_meters);
+          const height = this.environment.metersToPixels(obj.height_meters);
+          this.environment.physicsEngine.addRectangleObstacle(x, y, width, height, 'column');
+        }
+      });
+    }, 100); // Small delay to ensure components are initialized
   }
 
   private resetRoverPosition() {

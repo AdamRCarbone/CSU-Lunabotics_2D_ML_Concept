@@ -12,6 +12,7 @@ export class PhysicsEngine {
   private world: World;
   private objects: Map<number, PhysicsObject> = new Map();
   private roverBody: Body | null = null;
+  private collisionCallback: (() => void) | null = null;
 
   // Physics settings
   private readonly PHYSICS_SCALE = 100; // pixels per meter
@@ -28,6 +29,11 @@ export class PhysicsEngine {
     Events.on(this.engine, 'collisionStart', (event) => {
       this.handleCollision(event);
     });
+  }
+
+  // Set collision callback
+  setCollisionCallback(callback: () => void) {
+    this.collisionCallback = callback;
   }
 
   // Create the rover physics body
@@ -166,10 +172,16 @@ export class PhysicsEngine {
       if (bodyA.label === 'rover' || bodyB.label === 'rover') {
         const otherBody = bodyA.label === 'rover' ? bodyB : bodyA;
 
-        // Emit collision event or handle reset
-        if (otherBody.label.includes('wall') || otherBody.label.includes('obstacle')) {
-          // Collision detected - this can trigger reset or other actions
+        // Trigger callback for collisions with walls or obstacles
+        if (otherBody.label.includes('wall') || otherBody.label.includes('obstacle') ||
+            otherBody.label.includes('rock') || otherBody.label.includes('crater') ||
+            otherBody.label.includes('column')) {
           console.log('Collision detected with:', otherBody.label);
+
+          // Trigger the reset callback
+          if (this.collisionCallback) {
+            this.collisionCallback();
+          }
         }
       }
     }
