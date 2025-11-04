@@ -162,14 +162,14 @@ export class SceneManager {
       color: 0x191919 // Almost black
     });
 
-    // Wheel positions relative to body center
+    // Wheel positions - Front is positive Y (top), back is negative Y (bottom)
     const wheelPositions = [
-      { x: -width * 0.375, y: -height * 0.25 },  // Front left
+      { x: -width * 0.375, y: height * 0.25 },   // Front left
       { x: -width * 0.375, y: 0 },               // Middle left
-      { x: -width * 0.375, y: height * 0.25 },   // Back left
-      { x: width * 0.375, y: -height * 0.25 },   // Front right
+      { x: -width * 0.375, y: -height * 0.25 },  // Back left
+      { x: width * 0.375, y: height * 0.25 },    // Front right
       { x: width * 0.375, y: 0 },                // Middle right
-      { x: width * 0.375, y: height * 0.25 }     // Back right
+      { x: width * 0.375, y: -height * 0.25 }    // Back right
     ];
 
     wheelPositions.forEach(pos => {
@@ -186,30 +186,30 @@ export class SceneManager {
       rover.add(wheel);
     });
 
-    // Bucket (front scoop) - with different radius for top and bottom
+    // Bucket (front scoop) - at the FRONT (positive Y)
     const bucketWidth = width * 1.375;
     const bucketHeight = height / 5;
-    const bucketTopRadius = radius / 4;
-    const bucketBottomRadius = radius * 1.5;
+    const bucketTopRadius = radius * 1.5;   // Larger radius at front
+    const bucketBottomRadius = radius / 4;   // Smaller radius at back
 
     // Custom shape for bucket with different corner radii
     const bucketShape = new THREE.Shape();
-    bucketShape.moveTo(-bucketWidth/2 + bucketBottomRadius, -bucketHeight/2);
-    bucketShape.lineTo(bucketWidth/2 - bucketBottomRadius, -bucketHeight/2);
-    bucketShape.quadraticCurveTo(bucketWidth/2, -bucketHeight/2, bucketWidth/2, -bucketHeight/2 + bucketBottomRadius);
-    bucketShape.lineTo(bucketWidth/2, bucketHeight/2 - bucketTopRadius);
-    bucketShape.quadraticCurveTo(bucketWidth/2, bucketHeight/2, bucketWidth/2 - bucketTopRadius, bucketHeight/2);
-    bucketShape.lineTo(-bucketWidth/2 + bucketTopRadius, bucketHeight/2);
-    bucketShape.quadraticCurveTo(-bucketWidth/2, bucketHeight/2, -bucketWidth/2, bucketHeight/2 - bucketTopRadius);
-    bucketShape.lineTo(-bucketWidth/2, -bucketHeight/2 + bucketBottomRadius);
-    bucketShape.quadraticCurveTo(-bucketWidth/2, -bucketHeight/2, -bucketWidth/2 + bucketBottomRadius, -bucketHeight/2);
+    bucketShape.moveTo(-bucketWidth/2 + bucketTopRadius, -bucketHeight/2);
+    bucketShape.lineTo(bucketWidth/2 - bucketTopRadius, -bucketHeight/2);
+    bucketShape.quadraticCurveTo(bucketWidth/2, -bucketHeight/2, bucketWidth/2, -bucketHeight/2 + bucketTopRadius);
+    bucketShape.lineTo(bucketWidth/2, bucketHeight/2 - bucketBottomRadius);
+    bucketShape.quadraticCurveTo(bucketWidth/2, bucketHeight/2, bucketWidth/2 - bucketBottomRadius, bucketHeight/2);
+    bucketShape.lineTo(-bucketWidth/2 + bucketBottomRadius, bucketHeight/2);
+    bucketShape.quadraticCurveTo(-bucketWidth/2, bucketHeight/2, -bucketWidth/2, bucketHeight/2 - bucketBottomRadius);
+    bucketShape.lineTo(-bucketWidth/2, -bucketHeight/2 + bucketTopRadius);
+    bucketShape.quadraticCurveTo(-bucketWidth/2, -bucketHeight/2, -bucketWidth/2 + bucketTopRadius, -bucketHeight/2);
 
     const bucketGeometry = new THREE.ShapeGeometry(bucketShape);
     const bucketMaterial = new THREE.MeshBasicMaterial({
       color: 0x969696 // Light gray
     });
     const bucket = new THREE.Mesh(bucketGeometry, bucketMaterial);
-    bucket.position.set(0, -height * 0.4, 0.01);
+    bucket.position.set(0, height * 0.4, 0.01); // Positive Y for front
     rover.add(bucket);
 
     // Bucket arms
@@ -219,13 +219,13 @@ export class SceneManager {
     const leftArmShape = this.createRoundedRectShape(-armWidth/2, -armHeight/2, armWidth, armHeight, radius/2);
     const leftArmGeometry = new THREE.ShapeGeometry(leftArmShape);
     const leftArm = new THREE.Mesh(leftArmGeometry, bucketMaterial);
-    leftArm.position.set(-bucketWidth / 5, -height * 0.35, 0.01);
+    leftArm.position.set(-bucketWidth / 5, height * 0.35, 0.01); // Positive Y for front
     rover.add(leftArm);
 
     const rightArmShape = this.createRoundedRectShape(-armWidth/2, -armHeight/2, armWidth, armHeight, radius/2);
     const rightArmGeometry = new THREE.ShapeGeometry(rightArmShape);
     const rightArm = new THREE.Mesh(rightArmGeometry, bucketMaterial);
-    rightArm.position.set(bucketWidth / 5, -height * 0.35, 0.01);
+    rightArm.position.set(bucketWidth / 5, height * 0.35, 0.01); // Positive Y for front
     rover.add(rightArm);
 
     // Add bounding box visualization if dimensions provided
@@ -261,6 +261,8 @@ export class SceneManager {
 
   // Create an obstacle (rock or crater)
   createObstacle(x: number, y: number, radius: number, type: 'rock' | 'crater'): THREE.Mesh {
+    console.log('Creating obstacle in scene:', { x, y, radius, type });
+
     const geometry = new THREE.CircleGeometry(radius, 32);
     const color = type === 'rock' ? 0x6b6b6b : 0x141414; // Gray for rocks, dark for craters (matching p5)
     const material = new THREE.MeshBasicMaterial({
@@ -271,11 +273,14 @@ export class SceneManager {
     obstacle.position.set(x, y, 0.3); // Above zones but below rover
 
     this.obstaclesGroup.add(obstacle);
+    console.log('Obstacle added. Total obstacles:', this.obstaclesGroup.children.length);
     return obstacle;
   }
 
   // Create a zone (rectangular area with rounded corners)
   createZone(x: number, y: number, width: number, height: number, color: number, opacity: number = 0.3): THREE.Mesh {
+    console.log('Creating zone:', { x, y, width, height, color: color.toString(16), opacity });
+
     const radius = this.environmentHeight / 50; // Same radius as environment border
     const shape = this.createRoundedRectShape(0, 0, width, height, radius);
     const geometry = new THREE.ShapeGeometry(shape);
@@ -289,6 +294,7 @@ export class SceneManager {
     zone.position.set(x, y, 0.1); // Just above background
 
     this.zonesGroup.add(zone);
+    console.log('Zone added to group. Total zones:', this.zonesGroup.children.length);
     return zone;
   }
 
@@ -328,6 +334,16 @@ export class SceneManager {
   // Render the scene
   render() {
     this.renderer.render(this.scene, this.camera);
+
+    // Debug: Log scene contents periodically
+    if (Math.random() < 0.01) { // 1% chance each frame
+      console.log('Scene contents:', {
+        environment: this.environmentGroup.children.length,
+        zones: this.zonesGroup.children.length,
+        obstacles: this.obstaclesGroup.children.length,
+        rover: this.roverGroup.children.length
+      });
+    }
   }
 
   // Start animation loop

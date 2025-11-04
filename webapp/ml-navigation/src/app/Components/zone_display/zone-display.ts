@@ -125,6 +125,28 @@ export class ZoneDisplay {
   initializeThree(sceneManager: SceneManager) {
     this.sceneManager = sceneManager;
 
+    // Ensure pixel dimensions are initialized
+    if (!this.startingZone_width_px) {
+      this.startingZone_width_px = this.environment.metersToPixels(this.startingZone_width_meters);
+      this.startingZone_height_px = this.environment.metersToPixels(this.startingZone_height_meters);
+      this.excavationZone_width_px = this.environment.metersToPixels(this.excavationZone_width_meters);
+      this.excavationZone_height_px = this.environment.metersToPixels(this.excavationZone_height_meters);
+      this.obstacleZone_width_px = this.environment.metersToPixels(this.obstacleZone_width_meters);
+      this.obstacleZone_height_px = this.environment.metersToPixels(this.obstacleZone_height_meters);
+      this.constructionZone_width_px = this.environment.metersToPixels(this.constructionZone_width_meters);
+      this.constructionZone_height_px = this.environment.metersToPixels(this.constructionZone_height_meters);
+      this.targetbermZone_width_px = this.environment.metersToPixels(this.targetbermZone_width_meters);
+      this.targetbermZone_height_px = this.environment.metersToPixels(this.targetbermZone_height_meters);
+      this.columnZone_width_px = this.environment.metersToPixels(this.columnZone_width_meters);
+      this.columnZone_height_px = this.environment.metersToPixels(this.columnZone_height_meters);
+    }
+
+    console.log('Initializing zones with dimensions:', {
+      starting: { w: this.startingZone_width_px, h: this.startingZone_height_px },
+      excavation: { w: this.excavationZone_width_px, h: this.excavationZone_height_px },
+      environment: { w: this.environment.environment_width_px, h: this.environment.environment_height_px }
+    });
+
     // Clear existing meshes
     this.zoneMeshes.forEach(mesh => {
       if (mesh.parent) mesh.parent.remove(mesh);
