@@ -213,13 +213,15 @@ export class RoverComponent implements OnInit, OnDestroy {
     const boundingWidth = (this.BoundingBox_Left + this.BoundingBox_Right);
     const boundingHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom);
 
-    // Create rover in physics engine with proper bounding box
+    // Create rover in physics engine with proper bounding box and offset
     this.physicsBody = this.environment.physicsEngine.createRover(
       startX,
       startY,
       boundingWidth,
       boundingHeight,
-      rotation
+      rotation,
+      this.BoundingBox_OffsetX,  // Pass the offset to align physics with visual
+      this.BoundingBox_OffsetY
     );
 
     // Create environment boundaries

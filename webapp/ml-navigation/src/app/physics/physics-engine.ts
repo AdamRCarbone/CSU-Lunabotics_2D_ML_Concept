@@ -36,23 +36,32 @@ export class PhysicsEngine {
     this.collisionCallback = callback;
   }
 
-  // Create the rover physics body
-  createRover(x: number, y: number, width: number, height: number, rotation: number = 0): Body {
+  // Create the rover physics body with offset support
+  createRover(x: number, y: number, width: number, height: number, rotation: number = 0, offsetX: number = 0, offsetY: number = 0): Body {
     // Remove existing rover if any
     if (this.roverBody) {
       World.remove(this.world, this.roverBody);
     }
 
-    // Create rover as a rectangle with proper physics properties
-    this.roverBody = Bodies.rectangle(x, y, width, height, {
+    // Apply rotation to the offset
+    const angleRad = rotation * Math.PI / 180;
+    const rotatedOffsetX = offsetX * Math.cos(angleRad) - offsetY * Math.sin(angleRad);
+    const rotatedOffsetY = offsetX * Math.sin(angleRad) + offsetY * Math.cos(angleRad);
+
+    // Create rover at offset position
+    this.roverBody = Bodies.rectangle(x + rotatedOffsetX, y + rotatedOffsetY, width, height, {
       label: 'rover',
       density: 0.002,
       friction: 0.8,
       frictionAir: 0.05,
       restitution: 0.3,
-      angle: rotation * Math.PI / 180,
+      angle: angleRad,
       inertia: Infinity // Prevent unwanted rotation on collision
     });
+
+    // Store the offset for later use
+    (this.roverBody as any).offsetX = offsetX;
+    (this.roverBody as any).offsetY = offsetY;
 
     World.add(this.world, this.roverBody);
     this.objects.set(this.roverBody.id, { body: this.roverBody, type: 'rover' });
@@ -147,13 +156,22 @@ export class PhysicsEngine {
     }
   }
 
-  // Get rover position and rotation
+  // Get rover position and rotation (accounting for offset)
   getRoverState() {
     if (!this.roverBody) return null;
 
+    // Get stored offset
+    const offsetX = (this.roverBody as any).offsetX || 0;
+    const offsetY = (this.roverBody as any).offsetY || 0;
+
+    // Calculate the visual position by reversing the offset
+    const angle = this.roverBody.angle;
+    const rotatedOffsetX = offsetX * Math.cos(angle) - offsetY * Math.sin(angle);
+    const rotatedOffsetY = offsetX * Math.sin(angle) + offsetY * Math.cos(angle);
+
     return {
-      x: this.roverBody.position.x,
-      y: this.roverBody.position.y,
+      x: this.roverBody.position.x - rotatedOffsetX,
+      y: this.roverBody.position.y - rotatedOffsetY,
       angle: this.roverBody.angle * 180 / Math.PI,
       vx: this.roverBody.velocity.x,
       vy: this.roverBody.velocity.y,
@@ -211,8 +229,17 @@ export class PhysicsEngine {
   // Reset rover position
   resetRover(x: number, y: number, angle: number = 0) {
     if (this.roverBody) {
-      Body.setPosition(this.roverBody, { x, y });
-      Body.setAngle(this.roverBody, angle * Math.PI / 180);
+      // Get stored offset
+      const offsetX = (this.roverBody as any).offsetX || 0;
+      const offsetY = (this.roverBody as any).offsetY || 0;
+
+      // Apply rotation to the offset
+      const angleRad = angle * Math.PI / 180;
+      const rotatedOffsetX = offsetX * Math.cos(angleRad) - offsetY * Math.sin(angleRad);
+      const rotatedOffsetY = offsetX * Math.sin(angleRad) + offsetY * Math.cos(angleRad);
+
+      Body.setPosition(this.roverBody, { x: x + rotatedOffsetX, y: y + rotatedOffsetY });
+      Body.setAngle(this.roverBody, angleRad);
       Body.setVelocity(this.roverBody, { x: 0, y: 0 });
       Body.setAngularVelocity(this.roverBody, 0);
     }
