@@ -5,7 +5,8 @@ import { App } from '../../app';
 import { CollidableObject, CollisionShape } from '../collidable-object/collidable-object';
 import { Subscription } from 'rxjs';
 import { ZoneDisplay } from '../zone_display/zone-display';
-import p5 from 'p5';
+import * as THREE from 'three';
+import { SceneManager } from '../../three/scene-manager';
 
 @Component({
   selector: 'app-obstacle-field',
@@ -19,6 +20,8 @@ export class ObstacleField implements OnInit, OnDestroy {
   app = inject(App);
 
   private windowSizeSubscription!: Subscription;
+  private sceneManager!: SceneManager;
+  private obstacleMeshes: THREE.Mesh[] = [];
 
   // Collidable objects (obstacles) in the environment
   public collidableObjects: CollidableObject[] = [];
@@ -166,29 +169,39 @@ export class ObstacleField implements OnInit, OnDestroy {
     return false; // No overlap
   }
 
-  update(p: p5) {
-  }
+  // Initialize Three.js objects
+  initializeThree(sceneManager: SceneManager) {
+    this.sceneManager = sceneManager;
 
-  draw(p: p5) {
-    // Draw all obstacles (rocks and craters)
+    // Clear existing meshes
+    this.obstacleMeshes.forEach(mesh => {
+      if (mesh.parent) mesh.parent.remove(mesh);
+      if (mesh.geometry) mesh.geometry.dispose();
+      if (mesh.material instanceof THREE.Material) mesh.material.dispose();
+    });
+    this.obstacleMeshes = [];
+
+    // Create Three.js meshes for all obstacles
     for (const obj of this.collidableObjects) {
       if (!obj.isCircular() || !obj.radius_meters) continue;
 
-      const color = obj.color || '#000000';
-      const rgb = this.app.hexToRgb(color) ?? { r: 0, g: 0, b: 0 };
-
       // Convert meters to pixels
-      const x_px = this.environment.metersToPixels(obj.x_meters);
-      const y_px = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters); // Flip Y
+      const x_px = (obj.x_meters / this.environment.environment_width_meters) * this.environment.environment_width_px;
+      const y_px = this.environment.environment_height_px - ((obj.y_meters / this.environment.environment_height_meters) * this.environment.environment_height_px);
       const radius_px = this.environment.metersToPixels(obj.radius_meters);
 
-      // Draw circle
-      p.push();
-      p.stroke(rgb.r, rgb.g, rgb.b, 255);
-      p.fill(rgb.r, rgb.g, rgb.b, 255);
-      p.strokeWeight(2);
-      p.circle(x_px, y_px, radius_px * 2); // p5.js circle uses diameter
-      p.pop();
+      // Determine type (rock or crater) based on name
+      const type = obj.name?.toLowerCase().includes('crater') ? 'crater' : 'rock';
+
+      // Create obstacle mesh
+      const mesh = this.sceneManager.createObstacle(x_px, y_px, radius_px, type);
+      this.obstacleMeshes.push(mesh);
     }
+  }
+
+  // Update Three.js objects (called from animation loop)
+  updateThree() {
+    // Obstacles are static, no updates needed in animation loop
+    // This method is here for consistency with other components
   }
 }

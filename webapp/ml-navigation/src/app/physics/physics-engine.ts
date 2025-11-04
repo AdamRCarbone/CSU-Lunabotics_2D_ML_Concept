@@ -1,10 +1,8 @@
 import { Engine, World, Bodies, Body, Events, Vector, Composite } from 'matter-js';
-import p5 from 'p5';
 
 export interface PhysicsObject {
   body: Body;
   type: 'rover' | 'obstacle' | 'wall' | 'zone';
-  render?: (p: p5) => void;
 }
 
 export class PhysicsEngine {

@@ -3,21 +3,23 @@ import { Component, OnInit, OnDestroy, inject } from '@angular/core';
 import { WindowSizeService } from '../../services/window-size';
 import { Subscription } from 'rxjs';
 import { EnvironmentComponent } from '../../../environment/environment';
-import p5 from 'p5';
 import { App } from '../../app';
 import { ResetTrigger } from '../../services/reset-trigger';
 import { Body } from 'matter-js';
+import * as THREE from 'three';
+import { SceneManager } from '../../three/scene-manager';
 
 @Component({
   selector: 'app-rover',
   standalone: true,
-  template: '', // rendering handled by p5
+  template: '', // rendering handled by Three.js
   styleUrls: ['./rover.css']
 })
 export class RoverComponent implements OnInit, OnDestroy {
   private windowSizeSubscription!: Subscription;
   private resetSubscription!: Subscription;
   private physicsBody!: Body;
+  private roverMesh!: THREE.Group;
   environment = inject(EnvironmentComponent);
   app = inject(App);
   ResetTrigger = inject(ResetTrigger);
@@ -320,7 +322,32 @@ export class RoverComponent implements OnInit, OnDestroy {
     }
   }
 
-  update(p: p5) {
+  // Set the Three.js mesh for this rover
+  setThreeMesh(mesh: THREE.Group) {
+    this.roverMesh = mesh;
+    this.updateBoundingBoxVisibility();
+  }
+
+  // Update bounding box visibility
+  private updateBoundingBoxVisibility() {
+    if (!this.roverMesh) return;
+
+    // Find bounding box in the mesh
+    this.roverMesh.children.forEach(child => {
+      if (child.name === 'boundingBox') {
+        child.visible = this.showBoundingBox;
+        if (child instanceof THREE.LineLoop) {
+          const material = child.material as THREE.LineBasicMaterial;
+          material.opacity = this.bound_box_opacity / 255;
+        }
+      }
+    });
+  }
+
+  // Update Three.js rendering (called from animation loop)
+  updateThree() {
+    if (!this.physicsBody) return;
+
     const rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
 
     // Keys override slider
@@ -367,60 +394,6 @@ export class RoverComponent implements OnInit, OnDestroy {
 
     // Apply angular velocity
     this.environment.physicsEngine.setRoverAngularVelocity(angularVelocity);
-  }
-
-  draw(p: p5) {
-    if (!this.physicsBody) return;
-
-    const state = this.environment.physicsEngine.getRoverState();
-    if (!state) return;
-
-    const { x, y, angle } = state;
-
-    p.push();
-    p.translate(x, y);
-    p.rotate(angle);
-
-    // Rover Body
-    p.fill(100, 100, 100);
-    p.strokeWeight(this.Rover_Stroke_Thickness);
-    p.stroke(this.Rover_Stroke_Color);
-    p.rect(-this.Rover_Width / 2, -this.Rover_Height / 2, this.Rover_Width, this.Rover_Height, this.Rover_Radius);
-
-    // Wheels
-    p.fill(25, 25, 25);
-    p.strokeWeight(this.Rover_Stroke_Thickness);
-    p.stroke(this.Rover_Stroke_Color);
-    p.rect(this.Wheel_Left_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Left_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Left_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Front_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Middle_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-    p.rect(this.Wheel_Right_X, this.Wheel_Back_Y, this.Wheel_Width, this.Wheel_Height, this.Rover_Radius);
-
-    // Front Digging Bucket
-    p.fill(150, 150, 150);
-    p.strokeWeight(this.Rover_Stroke_Thickness);
-    p.stroke(this.Rover_Stroke_Color);
-    p.rect(this.Bucket_Arm_Left_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
-    p.rect(this.Bucket_Arm_Right_X, this.Bucket_Arm_Y, this.Bucket_Arm_Width, this.Bucket_Arm_Height, this.Rover_Radius);
-    p.rect(this.Bucket_X, this.Bucket_Y, this.Bucket_Width, this.Bucket_Height, this.Bucket_Top_Radius, this.Bucket_Top_Radius, this.Bucket_Bottom_Radius, this.Bucket_Bottom_Radius);
-
-    // Draw bounding box if enabled
-    if (this.showBoundingBox) {
-      p.stroke(255, 0, 0, this.bound_box_opacity);
-      p.strokeWeight(2);
-      p.noFill();
-      p.rectMode(p.CENTER);
-      // Match the physics body size exactly
-      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right);
-      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom);
-      // Draw at offset position (bounding box center offset from rover body center)
-      p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
-      p.rectMode(p.CORNER); // Reset to default
-    }
-
-    p.pop();
   }
 
   keyPressed(event: KeyboardEvent) {

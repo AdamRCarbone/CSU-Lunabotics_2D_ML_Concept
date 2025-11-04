@@ -2,12 +2,13 @@
 import { Component, ElementRef, OnInit, OnDestroy, ViewChild, Input, effect, forwardRef, inject } from '@angular/core';
 import { RoverComponent } from '../app/Components/rover/rover';
 import { WindowSizeService } from '../app/services/window-size';
-import p5 from 'p5';
 import { Subscription } from 'rxjs';
 import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
 import { PhysicsEngine } from '../app/physics/physics-engine';
+import { SceneManager } from '../app/three/scene-manager';
+import * as THREE from 'three';
 
 @Component({
   selector: 'app-environment',
@@ -22,9 +23,10 @@ import { PhysicsEngine } from '../app/physics/physics-engine';
   styleUrls: ['./environment.css']
 })
 export class EnvironmentComponent implements OnInit, OnDestroy {
-  private p5Instance!: p5;
+  private sceneManager!: SceneManager;
   private windowSizeSubscription!: Subscription;
   public physicsEngine!: PhysicsEngine;
+  private roverMesh!: THREE.Group;
   app = inject(App);
 
   // REAL-WORLD UNITS (METERS)
@@ -129,6 +131,18 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     // Randomize rover spawn position and rotation (ViewChild components available here)
     this.randomizeRoverSpawn();
 
+    // Initialize Three.js scene manager
+    this.sceneManager = new SceneManager(
+      this.canvasContainer.nativeElement,
+      this.environment_width_px,
+      this.environment_height_px,
+      this.environment_width_px + this.environment_stroke_weight_px * 2,
+      this.environment_height_px + this.environment_stroke_weight_px * 2
+    );
+
+    // Initialize rover, zones, and obstacles in Three.js
+    this.initializeThreeObjects();
+
     // Subscribe to window size changes
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ height }) => {
 
@@ -144,66 +158,91 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
       this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
-      // Resize the p5.js canvas (add extra space for stroke)
-      if (this.p5Instance) {
-        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
-        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
-        this.p5Instance.resizeCanvas(canvasWidth, canvasHeight);
+      // Update Three.js camera and renderer
+      if (this.sceneManager) {
+        this.sceneManager.updateCamera(
+          this.environment_width_px + this.environment_stroke_weight_px * 2,
+          this.environment_height_px + this.environment_stroke_weight_px * 2,
+          this.environment_width_px,
+          this.environment_height_px
+        );
       }
     });
 
-    // Initialize p5.js
-    this.p5Instance = new p5((p: p5) => {
-      p.setup = () => {
-        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
-        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
-        const canvas = p.createCanvas(canvasWidth, canvasHeight);
-        canvas.parent(this.canvasContainer.nativeElement);
-        p.angleMode(p.DEGREES);
-      };
+    // Start animation loop
+    this.sceneManager.animate(() => {
+      // Update physics engine
+      this.physicsEngine.update();
 
-      p.draw = () => {
-        p.fill(220);
-        p.stroke(150);
+      // Update components
+      this.zoneDisplay.updateThree();
+      this.obstacleField.updateThree();
+      this.rover.updateThree();
 
-        const sw = this.environment_stroke_weight_px;
-        p.strokeWeight(sw);
-        const strokeOffset = sw / 2;
+      // Update rover mesh position from physics
+      if (this.roverMesh) {
+        const state = this.physicsEngine.getRoverState();
+        if (state) {
+          this.roverMesh.position.x = state.x;
+          // Convert from canvas Y (top=0) to Three.js Y
+          this.roverMesh.position.y = this.environment_height_px - state.y;
+          this.roverMesh.rotation.z = -state.angle * Math.PI / 180;
+        }
+      }
+    });
 
-        // Draw at full dimensions - stroke will extend outside (centered on edge)
-        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+    // Set up keyboard event listeners
+    window.addEventListener('keydown', (event: KeyboardEvent) => {
+      this.rover.keyPressed(event);
+    });
 
-        // Update physics engine
-        this.physicsEngine.update();
-
-        this.zoneDisplay.update(p);    // Update zone display
-        this.zoneDisplay.draw(p);      // Render zone display
-
-        this.obstacleField.update(p);  // Update obstacle field
-        this.obstacleField.draw(p);    // Render obstacles
-
-        this.rover.update(p);          // Update rover
-        this.rover.draw(p);            // Render rover
-
-        p.noFill();
-        p.stroke(150);
-        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
-
-      };
-
-      p.keyPressed = (event: KeyboardEvent) => {
-        this.rover.keyPressed(event);
-      };
-
-      p.keyReleased = (event: KeyboardEvent) => {
-        this.rover.keyReleased(event);
-      };
+    window.addEventListener('keyup', (event: KeyboardEvent) => {
+      this.rover.keyReleased(event);
     });
   }
 
+  private initializeThreeObjects() {
+    // Create rover mesh
+    const roverWidth = this.metersToPixels(this.rover_length_meters / 2) * 0.6;
+    const roverHeight = this.metersToPixels(this.rover_length_meters / 2);
+
+    // Get bounding box dimensions from rover component
+    const boundingWidth = this.rover.BoundingBox_Left + this.rover.BoundingBox_Right;
+    const boundingHeight = this.rover.BoundingBox_Top + this.rover.BoundingBox_Bottom;
+    const boundingOffsetX = this.rover.BoundingBox_OffsetX;
+    const boundingOffsetY = -this.rover.BoundingBox_OffsetY; // Invert Y for Three.js coordinate system
+
+    this.roverMesh = this.sceneManager.createRover(
+      this.rover_start_x_px,
+      this.environment_height_px - this.rover_start_y_px,
+      roverWidth,
+      roverHeight,
+      -this.rover_start_rotation * Math.PI / 180,
+      boundingWidth,
+      boundingHeight,
+      boundingOffsetX,
+      boundingOffsetY
+    );
+
+    // Initialize zones
+    if (this.zoneDisplay) {
+      this.zoneDisplay.initializeThree(this.sceneManager);
+    }
+
+    // Initialize obstacles
+    if (this.obstacleField) {
+      this.obstacleField.initializeThree(this.sceneManager);
+    }
+
+    // Pass rover mesh to rover component
+    if (this.rover) {
+      this.rover.setThreeMesh(this.roverMesh);
+    }
+  }
+
   ngOnDestroy() {
-    if (this.p5Instance) {
-      this.p5Instance.remove();
+    if (this.sceneManager) {
+      this.sceneManager.dispose();
     }
     if (this.windowSizeSubscription) {
       this.windowSizeSubscription.unsubscribe();
