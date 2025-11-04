@@ -43,14 +43,15 @@ export class PhysicsEngine {
       World.remove(this.world, this.roverBody);
     }
 
-    // Create rover as a rectangle
+    // Create rover as a rectangle with proper physics properties
     this.roverBody = Bodies.rectangle(x, y, width, height, {
       label: 'rover',
-      density: 0.001,
-      friction: 0.5,
-      frictionAir: 0.1,
-      restitution: 0.2,
-      angle: rotation * Math.PI / 180
+      density: 0.002,
+      friction: 0.8,
+      frictionAir: 0.05,
+      restitution: 0.3,
+      angle: rotation * Math.PI / 180,
+      inertia: Infinity // Prevent unwanted rotation on collision
     });
 
     World.add(this.world, this.roverBody);
@@ -60,22 +61,22 @@ export class PhysicsEngine {
   }
 
   // Create environment boundaries
-  createBoundaries(width: number, height: number, thickness: number = 20) {
+  createBoundaries(width: number, height: number, thickness: number = 50) {
     const walls = [
-      // Top wall
+      // Top wall - positioned just outside visible area
       Bodies.rectangle(width / 2, -thickness / 2, width + thickness * 2, thickness, {
         isStatic: true, label: 'wall-top'
       }),
-      // Bottom wall
+      // Bottom wall - positioned just outside visible area
       Bodies.rectangle(width / 2, height + thickness / 2, width + thickness * 2, thickness, {
         isStatic: true, label: 'wall-bottom'
       }),
-      // Left wall
-      Bodies.rectangle(-thickness / 2, height / 2, thickness, height, {
+      // Left wall - positioned just outside visible area
+      Bodies.rectangle(-thickness / 2, height / 2, thickness, height + thickness * 2, {
         isStatic: true, label: 'wall-left'
       }),
-      // Right wall
-      Bodies.rectangle(width + thickness / 2, height / 2, thickness, height, {
+      // Right wall - positioned just outside visible area
+      Bodies.rectangle(width + thickness / 2, height / 2, thickness, height + thickness * 2, {
         isStatic: true, label: 'wall-right'
       })
     ];
@@ -91,7 +92,9 @@ export class PhysicsEngine {
     const obstacle = Bodies.circle(x, y, radius, {
       isStatic: true,
       label: label,
-      restitution: 0.5
+      restitution: 0.8,
+      friction: 0.8,
+      density: 1
     });
 
     World.add(this.world, obstacle);
@@ -105,7 +108,9 @@ export class PhysicsEngine {
     const obstacle = Bodies.rectangle(x, y, width, height, {
       isStatic: true,
       label: label,
-      restitution: 0.5
+      restitution: 0.8,
+      friction: 0.8,
+      density: 1
     });
 
     World.add(this.world, obstacle);

@@ -209,9 +209,9 @@ export class RoverComponent implements OnInit, OnDestroy {
     const startY = this.environment.rover_start_y_px;
     const rotation = this.environment.rover_start_rotation;
 
-    // Calculate actual bounding box size (including bucket and arms)
-    const boundingWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
-    const boundingHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
+    // Calculate actual bounding box size (including bucket and arms) - match visual exactly
+    const boundingWidth = (this.BoundingBox_Left + this.BoundingBox_Right);
+    const boundingHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom);
 
     // Create rover in physics engine with proper bounding box
     this.physicsBody = this.environment.physicsEngine.createRover(
@@ -253,31 +253,43 @@ export class RoverComponent implements OnInit, OnDestroy {
   private setupPhysicsObstacles() {
     // Wait for components to be initialized
     setTimeout(() => {
+      // Clear any existing obstacles first
+      this.environment.physicsEngine.clearObstacles();
+
       // Get obstacles from obstacle field
       const obstacles = this.environment.obstacleField?.collidableObjects || [];
+      console.log('Adding obstacles to physics:', obstacles.length);
+
       obstacles.forEach(obstacle => {
-        // Convert from meters to pixels
-        const x = this.environment.metersToPixels(obstacle.x_meters);
-        const y = this.environment.environment_height_px - this.environment.metersToPixels(obstacle.y_meters);
+        // Convert from meters to pixels (x_meters is distance from left, y_meters from bottom)
+        const x = (obstacle.x_meters / this.environment.environment_width_meters) * this.environment.environment_width_px;
+        const y = this.environment.environment_height_px - ((obstacle.y_meters / this.environment.environment_height_meters) * this.environment.environment_height_px);
 
         if (obstacle.isCircular() && obstacle.radius_meters) {
           const radius = this.environment.metersToPixels(obstacle.radius_meters);
-          this.environment.physicsEngine.addObstacle(x, y, radius, obstacle.name || 'obstacle');
+          const label = obstacle.name?.toLowerCase().includes('crater') ? 'crater' :
+                       obstacle.name?.toLowerCase().includes('rock') ? 'rock' : 'obstacle';
+          console.log(`Adding ${label} at (${x}, ${y}) with radius ${radius}`);
+          this.environment.physicsEngine.addObstacle(x, y, radius, label);
         }
       });
 
       // Get column post from zone display
       const zoneObjects = this.environment.zoneDisplay?.collidableObjects || [];
+      console.log('Adding zone objects to physics:', zoneObjects.length);
+
       zoneObjects.forEach(obj => {
         if (obj.isRectangular() && obj.width_meters && obj.height_meters) {
-          const x = this.environment.metersToPixels(obj.x_meters);
-          const y = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters);
+          // Column post position (center)
+          const x = (obj.x_meters / this.environment.environment_width_meters) * this.environment.environment_width_px;
+          const y = this.environment.environment_height_px - ((obj.y_meters / this.environment.environment_height_meters) * this.environment.environment_height_px);
           const width = this.environment.metersToPixels(obj.width_meters);
           const height = this.environment.metersToPixels(obj.height_meters);
+          console.log(`Adding column at (${x}, ${y}) with size ${width}x${height}`);
           this.environment.physicsEngine.addRectangleObstacle(x, y, width, height, 'column');
         }
       });
-    }, 100); // Small delay to ensure components are initialized
+    }, 200); // Slightly longer delay to ensure all components are fully initialized
   }
 
   private resetRoverPosition() {
@@ -398,8 +410,9 @@ export class RoverComponent implements OnInit, OnDestroy {
       p.strokeWeight(2);
       p.noFill();
       p.rectMode(p.CENTER);
-      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right) * 1.1;
-      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom) * 1.1;
+      // Match the physics body size exactly
+      const boxWidth = (this.BoundingBox_Left + this.BoundingBox_Right);
+      const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom);
       // Draw at offset position (bounding box center offset from rover body center)
       p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
       p.rectMode(p.CORNER); // Reset to default
