@@ -60,10 +60,23 @@ export class App implements AfterViewInit {
     return scaledCoordinate.toFixed(this.positionParams_sigfig);
   }
 
+  getRoverPositionMeters(axis: 'x' | 'y'): string {
+    if (!this.environment?.physicsEngine) return '—';
+
+    const state = this.environment.physicsEngine.getRoverState();
+    if (!state) return '—';
+
+    const value = axis === 'x' ?
+      this.environment.pixelsToMeters(state.x) :
+      this.environment.environment_height_meters - this.environment.pixelsToMeters(state.y);
+
+    return value.toFixed(this.positionParams_sigfig);
+  }
+
   updateRoverPosition() {
     this.positionParams = [
-      { name: 'x', value: this.scaleRoverPosition('x', this.environment.rover.centerX) },
-      { name: 'y', value: this.scaleRoverPosition('y', this.environment.rover.centerY) }
+      { name: 'x', value: this.getRoverPositionMeters('x') },
+      { name: 'y', value: this.getRoverPositionMeters('y') }
     ];
   }
 
