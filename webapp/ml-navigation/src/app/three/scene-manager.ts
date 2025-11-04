@@ -56,14 +56,15 @@ export class SceneManager {
 
     // Initialize groups
     this.environmentGroup = new THREE.Group();
-    this.roverGroup = new THREE.Group();
-    this.obstaclesGroup = new THREE.Group();
     this.zonesGroup = new THREE.Group();
+    this.obstaclesGroup = new THREE.Group();
+    this.roverGroup = new THREE.Group();
 
-    this.scene.add(this.environmentGroup);
-    this.scene.add(this.zonesGroup);
-    this.scene.add(this.obstaclesGroup);
-    this.scene.add(this.roverGroup);
+    // Add groups in order from back to front
+    this.scene.add(this.environmentGroup); // Background
+    this.scene.add(this.zonesGroup);       // Zones on top of background
+    this.scene.add(this.obstaclesGroup);   // Obstacles on top of zones
+    this.scene.add(this.roverGroup);       // Rover on top
 
     // Add ambient light for 2D cartoony look
     const ambientLight = new THREE.AmbientLight(0xffffff, 1);
@@ -103,18 +104,7 @@ export class SceneManager {
     const radius = this.environmentHeight / 50; // Border radius
     const strokeWeight = this.environmentHeight / 100;
 
-    // Create border (stroke)
-    const borderShape = this.createRoundedRectShape(0, 0, this.environmentWidth, this.environmentHeight, radius);
-    const borderGeometry = new THREE.ShapeGeometry(borderShape);
-    const borderMaterial = new THREE.MeshBasicMaterial({
-      color: 0x969696,
-      side: THREE.DoubleSide
-    });
-    const borderMesh = new THREE.Mesh(borderGeometry, borderMaterial);
-    borderMesh.position.z = 0.01;
-    this.environmentGroup.add(borderMesh);
-
-    // Create inner fill (slightly smaller to show border)
+    // Create inner fill FIRST (at the back)
     const innerShape = this.createRoundedRectShape(
       strokeWeight,
       strokeWeight,
@@ -128,8 +118,22 @@ export class SceneManager {
       side: THREE.DoubleSide
     });
     const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
-    innerMesh.position.z = 0.02;
+    innerMesh.position.z = -1; // Put it behind everything
     this.environmentGroup.add(innerMesh);
+
+    // Create border (stroke) - just the outline
+    const borderPoints: THREE.Vector2[] = [];
+    const shape = this.createRoundedRectShape(0, 0, this.environmentWidth, this.environmentHeight, radius);
+    shape.getPoints(50).forEach(pt => borderPoints.push(new THREE.Vector2(pt.x, pt.y)));
+
+    const borderGeometry = new THREE.BufferGeometry().setFromPoints(borderPoints);
+    const borderMaterial = new THREE.LineBasicMaterial({
+      color: 0x969696,
+      linewidth: 3
+    });
+    const border = new THREE.LineLoop(borderGeometry, borderMaterial);
+    border.position.z = 0.1; // Put border on top
+    this.environmentGroup.add(border);
   }
 
   // Create rover as a group of shapes with optional bounding box offset
@@ -248,7 +252,7 @@ export class SceneManager {
     }
 
     // Set position and rotation
-    rover.position.set(x, y, 0.1);
+    rover.position.set(x, y, 0.5); // Put rover on top
     rover.rotation.z = rotation;
 
     this.roverGroup.add(rover);
@@ -258,13 +262,13 @@ export class SceneManager {
   // Create an obstacle (rock or crater)
   createObstacle(x: number, y: number, radius: number, type: 'rock' | 'crater'): THREE.Mesh {
     const geometry = new THREE.CircleGeometry(radius, 32);
-    const color = type === 'rock' ? 0x8B7355 : 0x696969; // Brown for rocks, gray for craters
+    const color = type === 'rock' ? 0x6b6b6b : 0x141414; // Gray for rocks, dark for craters (matching p5)
     const material = new THREE.MeshBasicMaterial({
       color: color,
       side: THREE.DoubleSide
     });
     const obstacle = new THREE.Mesh(geometry, material);
-    obstacle.position.set(x, y, 0.05);
+    obstacle.position.set(x, y, 0.3); // Above zones but below rover
 
     this.obstaclesGroup.add(obstacle);
     return obstacle;
@@ -282,7 +286,7 @@ export class SceneManager {
       side: THREE.DoubleSide
     });
     const zone = new THREE.Mesh(geometry, material);
-    zone.position.set(x, y, 0.02);
+    zone.position.set(x, y, 0.1); // Just above background
 
     this.zonesGroup.add(zone);
     return zone;
@@ -298,7 +302,7 @@ export class SceneManager {
       side: THREE.DoubleSide
     });
     const post = new THREE.Mesh(geometry, material);
-    post.position.set(x, y, 0.05);
+    post.position.set(x, y, 0.4); // Above zones and obstacles
 
     this.obstaclesGroup.add(post);
     return post;
