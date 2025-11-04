@@ -72,8 +72,8 @@ export class RoverComponent implements OnInit, OnDestroy {
   private speedThreshold: number = 0.1;
 
   // Physics properties
-  private maxSpeed: number = 2; // Max speed in physics units
-  private maxAngularSpeed: number = 0.05; // Max angular velocity
+  private maxSpeed: number = 2/6; // Max speed in physics units
+  private maxAngularSpeed: number = 0.05/6; // Max angular velocity
 
   set speedMultiplier(value: number) {
     const isKeyOverride = this.pressedKeys.has('w') || this.pressedKeys.has('s');
