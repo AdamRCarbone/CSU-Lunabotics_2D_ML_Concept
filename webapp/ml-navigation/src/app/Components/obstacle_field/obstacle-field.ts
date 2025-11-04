@@ -6,6 +6,7 @@ import { CollidableObject, CollisionShape } from '../collidable-object/collidabl
 import { Subscription } from 'rxjs';
 import { ZoneDisplay } from '../zone_display/zone-display';
 import p5 from 'p5';
+import { ResetTrigger } from '../../services/reset-trigger';
 
 @Component({
   selector: 'app-obstacle-field',
@@ -17,8 +18,10 @@ export class ObstacleField implements OnInit, OnDestroy {
   environment = inject(EnvironmentComponent);
   windowSizeService = inject(WindowSizeService);
   app = inject(App);
+  resetTrigger = inject(ResetTrigger);
 
   private windowSizeSubscription!: Subscription;
+  private resetSubscription!: Subscription;
 
   // Collidable objects (obstacles) in the environment
   public collidableObjects: CollidableObject[] = [];
@@ -47,11 +50,19 @@ export class ObstacleField implements OnInit, OnDestroy {
       // Currently obstacles don't need to regenerate on resize
       // But subscription is here if needed in the future
     });
+
+    // Subscribe to reset trigger to regenerate obstacles on collision
+    this.resetSubscription = this.resetTrigger.reset$.subscribe(() => {
+      this.generateObstacles();
+    });
   }
 
   ngOnDestroy() {
     if (this.windowSizeSubscription) {
       this.windowSizeSubscription.unsubscribe();
+    }
+    if (this.resetSubscription) {
+      this.resetSubscription.unsubscribe();
     }
   }
 
