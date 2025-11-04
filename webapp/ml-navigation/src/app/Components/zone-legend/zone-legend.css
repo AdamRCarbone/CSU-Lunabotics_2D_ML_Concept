@@ -39,14 +39,12 @@
 
 .legend-item.active-zone {
   background: rgba(142, 76, 255, 0.25);
-  border: 2px solid #999999;
   animation: pulse 1.5s ease-in-out infinite;
 }
 
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
-    background: rgba(142, 76, 255, 0.25);
   }
   50% {
     transform: scale(1.005);

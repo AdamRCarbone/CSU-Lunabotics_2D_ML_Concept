@@ -18,6 +18,7 @@ export class UniversalSliderComponent implements OnInit, OnDestroy {
   @Input() label?: string;
   @Input() showValue: boolean = true;
   @Input() heightPercent?: number; // 0-100 percentage of window height
+  @Input() environmentHeightPx?: number; // Height in pixels from environment
 
   // Customization
   @Input() color: string = '#1a73e8'; // Main accent color for thumb and pills
@@ -71,6 +72,9 @@ export class UniversalSliderComponent implements OnInit, OnDestroy {
   }
 
   get containerHeight(): string | undefined {
+    if (this.environmentHeightPx) {
+      return `${this.environmentHeightPx}px`;
+    }
     if (!this.heightPercent) return undefined;
     const heightPx = (this.heightPercent / 100) * this.windowHeight();
     return `${heightPx}px`;
