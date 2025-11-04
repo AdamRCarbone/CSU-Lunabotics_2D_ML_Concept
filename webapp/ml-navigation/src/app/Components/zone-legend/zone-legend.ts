@@ -1,9 +1,11 @@
-import { Component } from '@angular/core';
+import { Component, Input } from '@angular/core';
+import { Zone } from '../../enums/zone.enum';
 
 export interface ZoneInfo {
   name: string;
   color: string;
   description?: string;
+  zoneType?: Zone;
 }
 
 // Single source of truth for zone colors and information
@@ -20,27 +22,32 @@ export const ZONE_INFO: ZoneInfo[] = [
   {
     name: 'Starting Zone',
     color: ZONE_COLORS.startingZone,
-    description: '2m × 2m'
+    description: '2m × 2m',
+    zoneType: Zone.STARTING
   },
   {
     name: 'Excavation Zone',
     color: ZONE_COLORS.excavationZone,
-    description: '2.5m wide'
+    description: '2.5m wide',
+    zoneType: Zone.EXCAVATION
   },
   {
     name: 'Obstacle Zone',
     color: ZONE_COLORS.obstacleZone,
-    description: '4.38m wide'
+    description: '4.38m wide',
+    zoneType: Zone.OBSTACLE
   },
   {
     name: 'Construction Zone',
     color: ZONE_COLORS.constructionZone,
-    description: '3m × 1.5m'
+    description: '3m × 1.5m',
+    zoneType: Zone.CONSTRUCTION
   },
   {
     name: 'Target Berm',
     color: ZONE_COLORS.targetBermZone,
-    description: '1.7m × 0.8m'
+    description: '1.7m × 0.8m',
+    zoneType: Zone.TARGET_BERM
   }
 ];
 
@@ -52,4 +59,9 @@ export const ZONE_INFO: ZoneInfo[] = [
 })
 export class ZoneLegend {
   zones = ZONE_INFO;
+  @Input() currentZone: Zone = Zone.NONE;
+
+  isActiveZone(zone: ZoneInfo): boolean {
+    return zone.zoneType === this.currentZone;
+  }
 }

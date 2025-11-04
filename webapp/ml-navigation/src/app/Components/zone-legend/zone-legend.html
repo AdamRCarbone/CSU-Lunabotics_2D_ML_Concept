@@ -3,7 +3,7 @@
 
   <div class="legend-items">
     @for (zone of zones; track zone.name) {
-      <div class="legend-item">
+      <div class="legend-item" [class.active-zone]="isActiveZone(zone)">
         <div
           class="zone-indicator"
           [style.background]="zone.color"

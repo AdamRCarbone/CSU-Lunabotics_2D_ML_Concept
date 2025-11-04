@@ -7,6 +7,7 @@ import p5 from 'p5';
 import { App } from '../../app';
 import { ResetTrigger } from '../../services/reset-trigger';
 import { Body } from 'matter-js';
+import { Zone } from '../../enums/zone.enum';
 
 @Component({
   selector: 'app-rover',
@@ -74,6 +75,9 @@ export class RoverComponent implements OnInit, OnDestroy {
   // Physics properties
   private maxSpeed: number = 2/6; // Max speed in physics units
   private maxAngularSpeed: number = 0.05/6; // Max angular velocity
+
+  // Zone tracking
+  public currentZone: Zone = Zone.NONE;
 
   set speedMultiplier(value: number) {
     const isKeyOverride = this.pressedKeys.has('w') || this.pressedKeys.has('s');
@@ -322,6 +326,8 @@ export class RoverComponent implements OnInit, OnDestroy {
 
   update(p: p5) {
     const rotationModifier = this._speedMultiplier >= 0 ? 1 : -1;
+
+    // Zone-based behavior logic can be implemented here using this.currentZone
 
     // Keys override slider
     if (this.pressedKeys.has('w')) {

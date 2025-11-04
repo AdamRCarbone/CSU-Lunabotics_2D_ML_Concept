@@ -35,7 +35,7 @@
 
 <main class="main">
   <div class="content">
-    <app-zone-legend class="zone-legend-display"></app-zone-legend>
+    <app-zone-legend class="zone-legend-display" [currentZone]="currentZone"></app-zone-legend>
     <app-environment
       [roverSpeedMultiplier]="speedValue"
       [roverTargetHeading]="rotationValue">
