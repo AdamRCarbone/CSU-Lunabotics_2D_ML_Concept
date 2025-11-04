@@ -185,7 +185,7 @@ export class ObstacleField implements OnInit, OnDestroy {
     for (const obj of this.collidableObjects) {
       if (!obj.isCircular() || !obj.radius_meters) continue;
 
-      // Convert meters to pixels
+      // Convert meters to pixels (y_meters is from bottom, so we need to invert)
       const x_px = (obj.x_meters / this.environment.environment_width_meters) * this.environment.environment_width_px;
       const y_px = this.environment.environment_height_px - ((obj.y_meters / this.environment.environment_height_meters) * this.environment.environment_height_px);
       const radius_px = this.environment.metersToPixels(obj.radius_meters);

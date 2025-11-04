@@ -31,21 +31,19 @@ export class SceneManager {
     this.scene.background = new THREE.Color(0xdcdcdc); // Light gray background
 
     // Set up orthographic camera for 2D top-down view
-    const aspect = pixelWidth / pixelHeight;
-    const frustumSize = height;
-
+    // Camera looks at origin, so we set bounds to match environment size
     this.camera = new THREE.OrthographicCamera(
-      -frustumSize * aspect / 2, // left
-      frustumSize * aspect / 2,  // right
-      frustumSize / 2,           // top
-      -frustumSize / 2,          // bottom
-      0.1,                       // near
-      1000                       // far
+      0,              // left
+      width,          // right
+      height,         // top
+      0,              // bottom
+      -10,            // near
+      10              // far
     );
 
-    // Position camera for top-down view
-    this.camera.position.set(width / 2, height / 2, 10);
-    this.camera.lookAt(width / 2, height / 2, 0);
+    // Position camera looking down at the scene
+    this.camera.position.set(0, 0, 5);
+    this.camera.lookAt(0, 0, 0);
 
     // Set up renderer
     this.renderer = new THREE.WebGLRenderer({
@@ -75,44 +73,63 @@ export class SceneManager {
     this.createEnvironmentBoundary();
   }
 
-  private createEnvironmentBoundary() {
-    // Create a rounded rectangle for the environment boundary
+  // Helper to create rounded rectangle shape
+  private createRoundedRectShape(x: number, y: number, width: number, height: number, radius: number): THREE.Shape {
     const shape = new THREE.Shape();
-    const radius = this.environmentHeight / 50; // Border radius
-    const x = 0;
-    const y = 0;
-    const width = this.environmentWidth;
-    const height = this.environmentHeight;
 
-    // Draw rounded rectangle
+    // Start from bottom-left corner + radius
     shape.moveTo(x + radius, y);
+    // Bottom edge
     shape.lineTo(x + width - radius, y);
+    // Bottom-right corner
     shape.quadraticCurveTo(x + width, y, x + width, y + radius);
+    // Right edge
     shape.lineTo(x + width, y + height - radius);
+    // Top-right corner
     shape.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+    // Top edge
     shape.lineTo(x + radius, y + height);
+    // Top-left corner
     shape.quadraticCurveTo(x, y + height, x, y + height - radius);
+    // Left edge
     shape.lineTo(x, y + radius);
+    // Bottom-left corner
     shape.quadraticCurveTo(x, y, x + radius, y);
 
-    // Create geometry and mesh for filled area
-    const geometry = new THREE.ShapeGeometry(shape);
-    const material = new THREE.MeshBasicMaterial({
+    return shape;
+  }
+
+  private createEnvironmentBoundary() {
+    const radius = this.environmentHeight / 50; // Border radius
+    const strokeWeight = this.environmentHeight / 100;
+
+    // Create border (stroke)
+    const borderShape = this.createRoundedRectShape(0, 0, this.environmentWidth, this.environmentHeight, radius);
+    const borderGeometry = new THREE.ShapeGeometry(borderShape);
+    const borderMaterial = new THREE.MeshBasicMaterial({
+      color: 0x969696,
+      side: THREE.DoubleSide
+    });
+    const borderMesh = new THREE.Mesh(borderGeometry, borderMaterial);
+    borderMesh.position.z = 0.01;
+    this.environmentGroup.add(borderMesh);
+
+    // Create inner fill (slightly smaller to show border)
+    const innerShape = this.createRoundedRectShape(
+      strokeWeight,
+      strokeWeight,
+      this.environmentWidth - strokeWeight * 2,
+      this.environmentHeight - strokeWeight * 2,
+      radius - strokeWeight
+    );
+    const innerGeometry = new THREE.ShapeGeometry(innerShape);
+    const innerMaterial = new THREE.MeshBasicMaterial({
       color: 0xdcdcdc,
       side: THREE.DoubleSide
     });
-    const mesh = new THREE.Mesh(geometry, material);
-    this.environmentGroup.add(mesh);
-
-    // Create border
-    const borderGeometry = new THREE.BufferGeometry().setFromPoints(shape.getPoints());
-    const borderMaterial = new THREE.LineBasicMaterial({
-      color: 0x969696,
-      linewidth: 3
-    });
-    const border = new THREE.Line(borderGeometry, borderMaterial);
-    border.position.z = 0.01; // Slightly above the fill
-    this.environmentGroup.add(border);
+    const innerMesh = new THREE.Mesh(innerGeometry, innerMaterial);
+    innerMesh.position.z = 0.02;
+    this.environmentGroup.add(innerMesh);
   }
 
   // Create rover as a group of shapes with optional bounding box offset
@@ -121,8 +138,11 @@ export class SceneManager {
               boundingOffsetX: number = 0, boundingOffsetY: number = 0): THREE.Group {
     const rover = new THREE.Group();
 
-    // Main body
-    const bodyGeometry = new THREE.PlaneGeometry(width, height);
+    const radius = height / 10; // Small radius for rover parts
+
+    // Main body with rounded corners
+    const bodyShape = this.createRoundedRectShape(-width/2, -height/2, width, height, radius);
+    const bodyGeometry = new THREE.ShapeGeometry(bodyShape);
     const bodyMaterial = new THREE.MeshBasicMaterial({
       color: 0x646464 // Dark gray
     });
@@ -132,7 +152,8 @@ export class SceneManager {
     // Wheels (6 wheels like in the p5 version)
     const wheelWidth = width / 4;
     const wheelHeight = height / 4;
-    const wheelGeometry = new THREE.PlaneGeometry(wheelWidth, wheelHeight);
+    const wheelRadius = radius / 2;
+
     const wheelMaterial = new THREE.MeshBasicMaterial({
       color: 0x191919 // Almost black
     });
@@ -148,15 +169,38 @@ export class SceneManager {
     ];
 
     wheelPositions.forEach(pos => {
+      const wheelShape = this.createRoundedRectShape(
+        -wheelWidth/2,
+        -wheelHeight/2,
+        wheelWidth,
+        wheelHeight,
+        wheelRadius
+      );
+      const wheelGeometry = new THREE.ShapeGeometry(wheelShape);
       const wheel = new THREE.Mesh(wheelGeometry, wheelMaterial);
       wheel.position.set(pos.x, pos.y, 0.01);
       rover.add(wheel);
     });
 
-    // Bucket (front scoop)
+    // Bucket (front scoop) - with different radius for top and bottom
     const bucketWidth = width * 1.375;
     const bucketHeight = height / 5;
-    const bucketGeometry = new THREE.PlaneGeometry(bucketWidth, bucketHeight);
+    const bucketTopRadius = radius / 4;
+    const bucketBottomRadius = radius * 1.5;
+
+    // Custom shape for bucket with different corner radii
+    const bucketShape = new THREE.Shape();
+    bucketShape.moveTo(-bucketWidth/2 + bucketBottomRadius, -bucketHeight/2);
+    bucketShape.lineTo(bucketWidth/2 - bucketBottomRadius, -bucketHeight/2);
+    bucketShape.quadraticCurveTo(bucketWidth/2, -bucketHeight/2, bucketWidth/2, -bucketHeight/2 + bucketBottomRadius);
+    bucketShape.lineTo(bucketWidth/2, bucketHeight/2 - bucketTopRadius);
+    bucketShape.quadraticCurveTo(bucketWidth/2, bucketHeight/2, bucketWidth/2 - bucketTopRadius, bucketHeight/2);
+    bucketShape.lineTo(-bucketWidth/2 + bucketTopRadius, bucketHeight/2);
+    bucketShape.quadraticCurveTo(-bucketWidth/2, bucketHeight/2, -bucketWidth/2, bucketHeight/2 - bucketTopRadius);
+    bucketShape.lineTo(-bucketWidth/2, -bucketHeight/2 + bucketBottomRadius);
+    bucketShape.quadraticCurveTo(-bucketWidth/2, -bucketHeight/2, -bucketWidth/2 + bucketBottomRadius, -bucketHeight/2);
+
+    const bucketGeometry = new THREE.ShapeGeometry(bucketShape);
     const bucketMaterial = new THREE.MeshBasicMaterial({
       color: 0x969696 // Light gray
     });
@@ -167,13 +211,16 @@ export class SceneManager {
     // Bucket arms
     const armWidth = bucketHeight / 2.5;
     const armHeight = bucketHeight * 1.5;
-    const armGeometry = new THREE.PlaneGeometry(armWidth, armHeight);
 
-    const leftArm = new THREE.Mesh(armGeometry, bucketMaterial);
+    const leftArmShape = this.createRoundedRectShape(-armWidth/2, -armHeight/2, armWidth, armHeight, radius/2);
+    const leftArmGeometry = new THREE.ShapeGeometry(leftArmShape);
+    const leftArm = new THREE.Mesh(leftArmGeometry, bucketMaterial);
     leftArm.position.set(-bucketWidth / 5, -height * 0.35, 0.01);
     rover.add(leftArm);
 
-    const rightArm = new THREE.Mesh(armGeometry, bucketMaterial);
+    const rightArmShape = this.createRoundedRectShape(-armWidth/2, -armHeight/2, armWidth, armHeight, radius/2);
+    const rightArmGeometry = new THREE.ShapeGeometry(rightArmShape);
+    const rightArm = new THREE.Mesh(rightArmGeometry, bucketMaterial);
     rightArm.position.set(bucketWidth / 5, -height * 0.35, 0.01);
     rover.add(rightArm);
 
@@ -223,9 +270,11 @@ export class SceneManager {
     return obstacle;
   }
 
-  // Create a zone (rectangular area)
+  // Create a zone (rectangular area with rounded corners)
   createZone(x: number, y: number, width: number, height: number, color: number, opacity: number = 0.3): THREE.Mesh {
-    const geometry = new THREE.PlaneGeometry(width, height);
+    const radius = this.environmentHeight / 50; // Same radius as environment border
+    const shape = this.createRoundedRectShape(0, 0, width, height, radius);
+    const geometry = new THREE.ShapeGeometry(shape);
     const material = new THREE.MeshBasicMaterial({
       color: color,
       transparent: true,
@@ -233,17 +282,19 @@ export class SceneManager {
       side: THREE.DoubleSide
     });
     const zone = new THREE.Mesh(geometry, material);
-    zone.position.set(x + width/2, y + height/2, 0.02);
+    zone.position.set(x, y, 0.02);
 
     this.zonesGroup.add(zone);
     return zone;
   }
 
-  // Create column post
+  // Create column post with rounded corners
   createColumnPost(x: number, y: number, width: number, height: number): THREE.Mesh {
-    const geometry = new THREE.PlaneGeometry(width, height);
+    const radius = this.environmentHeight / 100; // Smaller radius for column
+    const shape = this.createRoundedRectShape(-width/2, -height/2, width, height, radius);
+    const geometry = new THREE.ShapeGeometry(shape);
     const material = new THREE.MeshBasicMaterial({
-      color: 0x808080,
+      color: 0xffffff, // White like in p5 version
       side: THREE.DoubleSide
     });
     const post = new THREE.Mesh(geometry, material);
@@ -255,16 +306,16 @@ export class SceneManager {
 
   // Update camera for window resizing
   updateCamera(pixelWidth: number, pixelHeight: number, envWidth: number, envHeight: number) {
-    const aspect = pixelWidth / pixelHeight;
-    const frustumSize = envHeight;
+    this.environmentWidth = envWidth;
+    this.environmentHeight = envHeight;
 
-    this.camera.left = -frustumSize * aspect / 2;
-    this.camera.right = frustumSize * aspect / 2;
-    this.camera.top = frustumSize / 2;
-    this.camera.bottom = -frustumSize / 2;
+    this.camera.left = 0;
+    this.camera.right = envWidth;
+    this.camera.top = envHeight;
+    this.camera.bottom = 0;
 
-    this.camera.position.set(envWidth / 2, envHeight / 2, 10);
-    this.camera.lookAt(envWidth / 2, envHeight / 2, 0);
+    this.camera.position.set(0, 0, 5);
+    this.camera.lookAt(0, 0, 0);
 
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(pixelWidth, pixelHeight);

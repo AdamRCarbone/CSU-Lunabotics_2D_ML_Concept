@@ -184,8 +184,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         const state = this.physicsEngine.getRoverState();
         if (state) {
           this.roverMesh.position.x = state.x;
-          // Convert from canvas Y (top=0) to Three.js Y
-          this.roverMesh.position.y = this.environment_height_px - state.y;
+          // Canvas and Three.js both use same coordinate system now
+          this.roverMesh.position.y = state.y;
           this.roverMesh.rotation.z = -state.angle * Math.PI / 180;
         }
       }
@@ -214,14 +214,14 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
 
     this.roverMesh = this.sceneManager.createRover(
       this.rover_start_x_px,
-      this.environment_height_px - this.rover_start_y_px,
+      this.rover_start_y_px,  // No need to invert Y anymore
       roverWidth,
       roverHeight,
       -this.rover_start_rotation * Math.PI / 180,
       boundingWidth,
       boundingHeight,
       boundingOffsetX,
-      boundingOffsetY
+      -boundingOffsetY  // Still invert the offset for proper orientation
     );
 
     // Initialize zones
