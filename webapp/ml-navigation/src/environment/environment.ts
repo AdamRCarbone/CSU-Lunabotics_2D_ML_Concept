@@ -7,6 +7,7 @@ import { Subscription } from 'rxjs';
 import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
+import { DiggingField } from '../app/Components/digging-field/digging-field';
 import { Frustum } from '../app/Components/frustum/frustum';
 import { PhysicsEngine } from '../app/physics/physics-engine';
 import { Zone } from '../app/enums/zone.enum';
@@ -14,12 +15,13 @@ import { Zone } from '../app/enums/zone.enum';
 @Component({
   selector: 'app-environment',
   standalone: true,
-  imports: [RoverComponent, ZoneDisplay, ObstacleField, Frustum],
+  imports: [RoverComponent, ZoneDisplay, ObstacleField, DiggingField, Frustum],
   template: `
     <div #canvasContainer></div>
     <app-rover #rover></app-rover>
     <app-zone-display #zoneDisplay></app-zone-display>
     <app-obstacle-field #obstacleField></app-obstacle-field>
+    <app-digging-field #diggingField></app-digging-field>
     <app-frustum #frustum></app-frustum>
   `,
   styleUrls: ['./environment.css']
@@ -56,6 +58,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
   @ViewChild('zoneDisplay', { static: true }) zoneDisplay!: ZoneDisplay;
   @ViewChild('obstacleField', { static: true }) obstacleField!: ObstacleField;
+  @ViewChild('diggingField', { static: true }) diggingField!: DiggingField;
   @ViewChild('frustum', { static: true }) frustum!: Frustum;
 
   @Input() set roverSpeedMultiplier(value: number) {
@@ -218,6 +221,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
 
         this.obstacleField.update(p);  // Update obstacle field
         this.obstacleField.draw(p);    // Render obstacles
+
+        this.diggingField.update(p);   // Update digging field
+        this.diggingField.draw(p);     // Render diggable orbs
 
         this.frustum.update(p);        // Update frustum
         this.frustum.draw(p);          // Render frustum (before rover so it's behind)
