@@ -2,18 +2,6 @@
   display: flex;
   align-items: center;
   justify-content: center;
-
-  background: #ffffff00;
+  background: transparent;
   min-width: 100px;
-
-}
-
-.position-display {
-  align-self: flex-start;
-  margin-left: 1rem;
-}
-
-.zone-legend-display {
-  align-self: flex-start;
-  margin-right: 1rem;
 }
