@@ -30,6 +30,7 @@ export class App implements AfterViewInit {
     { name: 'y', value: '—' }
   ];
   public positionParams_sigfig: number = 3;
+  public detectedObstaclesParams: Parameter[] = [];
   public currentZone: Zone = Zone.NONE;
 
   constructor(
@@ -82,6 +83,71 @@ export class App implements AfterViewInit {
     ];
   }
 
+  updateDetectedObstacles() {
+    if (!this.environment?.frustum) {
+      this.detectedObstaclesParams = [];
+      return;
+    }
+
+    const detected = this.environment.frustum.detectedCollidableObjects;
+    const params: Parameter[] = [];
+
+    for (let i = 0; i < detected.length; i++) {
+      const obj = detected[i];
+
+      // Calculate diameter
+      let diameter: number;
+      if (obj.radius_meters) {
+        diameter = obj.radius_meters * 2;
+      } else if (obj.width_meters && obj.height_meters) {
+        // For rectangles (like column post), use diagonal as diameter
+        diameter = Math.sqrt(obj.width_meters ** 2 + obj.height_meters ** 2);
+      } else {
+        diameter = 0;
+      }
+
+      // Format coordinates and diameter
+      const x = obj.x_meters.toFixed(2);
+      const y = obj.y_meters.toFixed(2);
+      const d = diameter.toFixed(2);
+
+      // Add separator between objects (except for first)
+      if (i > 0) {
+        params.push({
+          name: '―――',
+          value: '―――'
+        });
+      }
+
+      // Add object name/type
+      const objType = obj.name?.split('_')[0] || 'Object';
+      params.push({
+        name: `#${i + 1}`,
+        value: objType
+      });
+
+      // Add x coordinate
+      params.push({
+        name: 'x',
+        value: `${x}m`
+      });
+
+      // Add y coordinate
+      params.push({
+        name: 'y',
+        value: `${y}m`
+      });
+
+      // Add radius (diameter / 2)
+      params.push({
+        name: 'r',
+        value: `${(diameter / 2).toFixed(2)}m`
+      });
+    }
+
+    this.detectedObstaclesParams = params;
+  }
+
   ngAfterViewInit() {
     this.updateRoverPosition();
 
@@ -101,6 +167,7 @@ export class App implements AfterViewInit {
             // Update position parameters
             if (this.environment.rover) {
               this.updateRoverPosition();
+              this.updateDetectedObstacles();
               // Update current zone
               this.currentZone = this.environment.currentZone;
               this.cdr.markForCheck();
