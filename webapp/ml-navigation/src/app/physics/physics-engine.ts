@@ -131,19 +131,45 @@ export class PhysicsEngine {
   // Add pushable diggable object (regolith orb)
   addDiggable(x: number, y: number, radius: number, label: string = 'regolith'): Body {
     const diggable = Bodies.circle(x, y, radius, {
-      isStatic: false, // Make it dynamic (pushable)
+      isStatic: true, // Start as static (dig mode off by default)
       label: label,
       restitution: 0.1, // Low bounce
       friction: 0.9, // High friction with other surfaces
       frictionAir: 0.3, // High air resistance to stop sliding quickly
       density: 0.001, // Light weight so it's easy to push
-      inertia: Infinity // Prevent rotation
+      inertia: Infinity, // Prevent rotation
+      isSensor: true // Start as sensor (non-collidable, ghost mode)
     });
 
     World.add(this.world, diggable);
     this.objects.set(diggable.id, { body: diggable, type: 'diggable' });
 
     return diggable;
+  }
+
+  // Check if rover is overlapping with any diggable objects
+  isRoverOverlappingDiggables(): boolean {
+    if (!this.roverBody) return false;
+
+    const diggableBodies = Array.from(this.objects.entries())
+      .filter(([_, obj]) => obj.type === 'diggable')
+      .map(([_, obj]) => obj.body);
+
+    for (const diggable of diggableBodies) {
+      // Simple bounding box overlap check
+      const roverBounds = this.roverBody.bounds;
+      const diggableBounds = diggable.bounds;
+
+      // Check if bounds overlap
+      if (roverBounds.max.x >= diggableBounds.min.x &&
+          roverBounds.min.x <= diggableBounds.max.x &&
+          roverBounds.max.y >= diggableBounds.min.y &&
+          roverBounds.min.y <= diggableBounds.max.y) {
+        return true;
+      }
+    }
+
+    return false;
   }
 
   // Apply force to rover (for movement)

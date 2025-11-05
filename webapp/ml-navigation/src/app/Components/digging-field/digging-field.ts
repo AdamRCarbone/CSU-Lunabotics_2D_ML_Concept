@@ -16,6 +16,9 @@ export class DiggableObject {
   color: string;
   name: string;
   physicsBody?: Body; // Add physics body reference
+  isPickedUp: boolean = false; // Track if orb is picked up by rover
+  pickupOffsetX: number = 0; // Offset from rover center when picked up
+  pickupOffsetY: number = 0; // Offset from rover center when picked up
 
   constructor(config: {
     x_meters: number;
@@ -54,6 +57,7 @@ export class DiggingField implements OnInit, OnDestroy {
   public numOrbs: number = 15;          // Number of regolith orbs to generate
   public orbRadius: number = 0.075;      // Fixed radius for all orbs (0.15m diameter)
   public minSpacing: number = 0.2;       // Min spacing between orbs (meters)
+  public digModeEnabled: boolean = false; // Whether dig mode is active
 
   ngOnInit() {
     // Initialize diggable objects
@@ -226,6 +230,192 @@ export class DiggingField implements OnInit, OnDestroy {
   }
 
   update() {
+    // Update position of picked-up orbs to follow rover
+    this.updatePickedUpOrbs();
+  }
+
+  // Check if any orbs are in the front 1/10 grab zone
+  // Returns true if at least one orb is in the zone
+  public canGrab(): boolean {
+    if (!this.environment.rover || !this.environment.physicsEngine) return false;
+
+    const roverState = this.environment.physicsEngine.getRoverState();
+    if (!roverState) return false;
+
+    const roverX_px = roverState.x;
+    const roverY_px = roverState.y;
+    const roverAngle_rad = roverState.angle * Math.PI / 180;
+
+    // Get rover bucket position (front of rover)
+    const boundingBoxHeight_px = this.environment.rover.BoundingBox_Top + this.environment.rover.BoundingBox_Bottom;
+    const bucketY_local = this.environment.rover.Bucket_Y; // Bucket Y in local coords (negative = front)
+    const bucketHeight_px = this.environment.rover.Bucket_Height;
+    const bucketWidth_px = this.environment.rover.Bucket_Width;
+
+    // Define grab zone
+    const grabZoneHeight_px = boundingBoxHeight_px * 0.2; // 20% of bounding box height
+    const grabZoneWidth_px = bucketWidth_px; // Bucket width
+
+    // Calculate grab zone center position - moved back slightly from bucket front
+    const grabZoneDistance_px = bucketY_local + (bucketHeight_px * 0.2); // Slightly behind bucket front
+    const grabZoneX_px = roverX_px - Math.sin(roverAngle_rad) * grabZoneDistance_px;
+    const grabZoneY_px = roverY_px + Math.cos(roverAngle_rad) * grabZoneDistance_px;
+
+    console.log(`Grab zone at (${grabZoneX_px.toFixed(1)}, ${grabZoneY_px.toFixed(1)}), size ${grabZoneWidth_px.toFixed(1)}x${grabZoneHeight_px.toFixed(1)}`);
+    console.log(`Rover at (${roverX_px.toFixed(1)}, ${roverY_px.toFixed(1)}), angle ${roverState.angle.toFixed(1)}°`);
+
+    // Check each orb
+    let checkedCount = 0;
+    for (const orb of this.diggableObjects) {
+      if (orb.isPickedUp) continue; // Skip already picked up orbs
+
+      // Get orb position in pixels
+      const orbX_px = this.environment.metersToPixels(orb.x_meters);
+      const orbY_px = this.environment.environment_height_px - this.environment.metersToPixels(orb.y_meters);
+
+      // Calculate orb position relative to grab zone center
+      const dx_px = orbX_px - grabZoneX_px;
+      const dy_px = orbY_px - grabZoneY_px;
+
+      // Rotate to rover's local coordinate system
+      const localX_px = dx_px * Math.cos(-roverAngle_rad) - dy_px * Math.sin(-roverAngle_rad);
+      const localY_px = dx_px * Math.sin(-roverAngle_rad) + dy_px * Math.cos(-roverAngle_rad);
+
+      checkedCount++;
+      if (checkedCount <= 3) {
+        console.log(`  Orb ${orb.name} at (${orbX_px.toFixed(1)}, ${orbY_px.toFixed(1)}) -> local (${localX_px.toFixed(1)}, ${localY_px.toFixed(1)})`);
+      }
+
+      // Check if orb is within grab zone
+      if (Math.abs(localX_px) <= grabZoneWidth_px / 2 &&
+          Math.abs(localY_px) <= grabZoneHeight_px / 2) {
+        console.log(`  ✓ Orb ${orb.name} IS IN GRAB ZONE!`);
+        return true; // At least one orb is in grab zone
+      }
+    }
+
+    console.log(`  Checked ${checkedCount} orbs, none in grab zone`);
+    return false; // No orbs in grab zone
+  }
+
+  // Grab all orbs in the front 1/10 zone
+  public grabOrbs() {
+    if (!this.environment.rover || !this.environment.physicsEngine) return;
+
+    const roverState = this.environment.physicsEngine.getRoverState();
+    if (!roverState) return;
+
+    const roverX_px = roverState.x;
+    const roverY_px = roverState.y;
+    const roverAngle_rad = roverState.angle * Math.PI / 180;
+
+    // Get rover bucket position (front of rover)
+    const boundingBoxHeight_px = this.environment.rover.BoundingBox_Top + this.environment.rover.BoundingBox_Bottom;
+    const bucketY_local = this.environment.rover.Bucket_Y; // Bucket Y in local coords (negative = front)
+    const bucketHeight_px = this.environment.rover.Bucket_Height;
+    const bucketWidth_px = this.environment.rover.Bucket_Width;
+
+    // Define grab zone
+    const grabZoneHeight_px = boundingBoxHeight_px * 0.2; // 20% of bounding box height
+    const grabZoneWidth_px = bucketWidth_px; // Bucket width
+
+    // Calculate grab zone center position - moved back slightly from bucket front
+    const grabZoneDistance_px = bucketY_local + (bucketHeight_px * 0.2); // Slightly behind bucket front
+    const grabZoneX_px = roverX_px - Math.sin(roverAngle_rad) * grabZoneDistance_px;
+    const grabZoneY_px = roverY_px + Math.cos(roverAngle_rad) * grabZoneDistance_px;
+
+    // Grab all orbs in the zone
+    for (const orb of this.diggableObjects) {
+      if (orb.isPickedUp) continue;
+
+      // Get orb position in pixels
+      const orbX_px = this.environment.metersToPixels(orb.x_meters);
+      const orbY_px = this.environment.environment_height_px - this.environment.metersToPixels(orb.y_meters);
+
+      // Calculate orb position relative to grab zone center
+      const dx_px = orbX_px - grabZoneX_px;
+      const dy_px = orbY_px - grabZoneY_px;
+
+      // Rotate to rover's local coordinate system
+      const localX_px = dx_px * Math.cos(-roverAngle_rad) - dy_px * Math.sin(-roverAngle_rad);
+      const localY_px = dx_px * Math.sin(-roverAngle_rad) + dy_px * Math.cos(-roverAngle_rad);
+
+      // Check if orb is within grab zone
+      if (Math.abs(localX_px) <= grabZoneWidth_px / 2 &&
+          Math.abs(localY_px) <= grabZoneHeight_px / 2) {
+        // Grab the orb!
+        orb.isPickedUp = true;
+
+        // Store offset from rover center in ROVER'S LOCAL coordinate system
+        const dx_px = orbX_px - roverX_px;
+        const dy_px = orbY_px - roverY_px;
+        // Rotate to rover's local coordinates (inverse of current rotation)
+        orb.pickupOffsetX = dx_px * Math.cos(-roverAngle_rad) - dy_px * Math.sin(-roverAngle_rad);
+        orb.pickupOffsetY = dx_px * Math.sin(-roverAngle_rad) + dy_px * Math.cos(-roverAngle_rad);
+
+        console.log(`Grabbed orb: ${orb.name} at local offset (${orb.pickupOffsetX.toFixed(1)}, ${orb.pickupOffsetY.toFixed(1)})`);
+      }
+    }
+  }
+
+  // Update position of picked-up orbs to follow rover
+  private updatePickedUpOrbs() {
+    if (!this.environment.physicsEngine) return;
+
+    const roverState = this.environment.physicsEngine.getRoverState();
+    if (!roverState) return;
+
+    const roverX_px = roverState.x;
+    const roverY_px = roverState.y;
+    const roverAngle_rad = roverState.angle * Math.PI / 180;
+
+    for (const orb of this.diggableObjects) {
+      if (!orb.isPickedUp) continue;
+
+      // Rotate offset based on rover's current rotation
+      const rotatedOffsetX = orb.pickupOffsetX * Math.cos(roverAngle_rad) - orb.pickupOffsetY * Math.sin(roverAngle_rad);
+      const rotatedOffsetY = orb.pickupOffsetX * Math.sin(roverAngle_rad) + orb.pickupOffsetY * Math.cos(roverAngle_rad);
+
+      // Calculate new position in pixels
+      const newX_px = roverX_px + rotatedOffsetX;
+      const newY_px = roverY_px + rotatedOffsetY;
+
+      // Update physics body position
+      if (orb.physicsBody) {
+        Body.setPosition(orb.physicsBody, { x: newX_px, y: newY_px });
+      }
+
+      // Update stored position in meters for detection
+      orb.x_meters = this.environment.pixelsToMeters(newX_px);
+      orb.y_meters = this.environment.pixelsToMeters(this.environment.environment_height_px - newY_px);
+    }
+  }
+
+  // Check if any orbs are currently grabbed
+  public hasGrabbedOrbs(): boolean {
+    return this.diggableObjects.some(orb => orb.isPickedUp);
+  }
+
+  // Perform grab or release action
+  setDigMode(enabled: boolean) {
+    this.digModeEnabled = enabled;
+
+    if (enabled) {
+      // Trying to grab - only works if no orbs currently grabbed
+      if (!this.hasGrabbedOrbs()) {
+        this.grabOrbs();
+      }
+    } else {
+      // Release all grabbed orbs at their current location
+      for (const orb of this.diggableObjects) {
+        if (orb.isPickedUp) {
+          orb.isPickedUp = false;
+          orb.pickupOffsetX = 0;
+          orb.pickupOffsetY = 0;
+          console.log(`Released orb: ${orb.name} at (${orb.x_meters.toFixed(2)}, ${orb.y_meters.toFixed(2)})`);
+        }
+      }
+    }
   }
 
   draw(p: p5) {

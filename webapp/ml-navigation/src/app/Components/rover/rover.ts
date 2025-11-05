@@ -428,6 +428,17 @@ export class RoverComponent implements OnInit, OnDestroy {
       const boxHeight = (this.BoundingBox_Top + this.BoundingBox_Bottom);
       // Draw at offset position (bounding box center offset from rover body center)
       p.rect(this.BoundingBox_OffsetX, this.BoundingBox_OffsetY, boxWidth, boxHeight, this.Bucket_Top_Radius * 2);
+
+      // Draw grab zone at the bucket (front of rover) in BLUE
+      const grabZoneHeight = boxHeight * 0.2; // 20% of bounding box height
+      const grabZoneWidth = this.Bucket_Width; // Bucket width
+      // Position moved back slightly from bucket front
+      const grabZoneOffsetY = this.Bucket_Y + (this.Bucket_Height * 0.2); // Slightly behind bucket front
+      p.stroke(0, 100, 255, this.bound_box_opacity); // Blue
+      p.strokeWeight(3);
+      p.fill(0, 100, 255, 50); // Semi-transparent blue fill
+      p.rect(0, grabZoneOffsetY, grabZoneWidth, grabZoneHeight, this.Bucket_Top_Radius);
+
       p.rectMode(p.CORNER); // Reset to default
     }
 

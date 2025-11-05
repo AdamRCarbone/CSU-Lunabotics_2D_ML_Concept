@@ -1,5 +1,5 @@
 // src/app/app.component.ts
-import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone, } from '@angular/core';
+import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
@@ -9,6 +9,8 @@ import { ZoneLegend } from './Components/zone-legend/zone-legend';
 import { DetectedObstacles } from './Components/detected-obstacles/detected-obstacles';
 import { DetectedDiggableComponent } from './Components/detected-diggable/detected-diggable';
 import { Zone } from './enums/zone.enum';
+import { ResetTrigger } from './services/reset-trigger';
+import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
@@ -17,7 +19,7 @@ import { Zone } from './enums/zone.enum';
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
-export class App implements AfterViewInit {
+export class App implements AfterViewInit, OnDestroy {
   @ViewChild(EnvironmentComponent) environment!: EnvironmentComponent;
 
   title = 'ml-navigation';
@@ -33,11 +35,17 @@ export class App implements AfterViewInit {
   ];
   public positionParams_sigfig: number = 3;
   public currentZone: Zone = Zone.NONE;
+  public digMode: boolean = false;
+  public digModeParams: Parameter[] = [
+    { name: 'Mode', value: 'OFF' }
+  ];
+  private resetSubscription?: Subscription;
 
   constructor(
     private windowSizeService: WindowSizeService,
     private cdr: ChangeDetectorRef,
-    private ngZone: NgZone
+    private ngZone: NgZone,
+    private resetTrigger: ResetTrigger
   ) {
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
@@ -95,6 +103,14 @@ export class App implements AfterViewInit {
   ngAfterViewInit() {
     this.updateRoverPosition();
 
+    // Reset dig mode to OFF on initialization
+    this.resetDigMode();
+
+    // Subscribe to reset trigger to turn off dig mode on collision reset
+    this.resetSubscription = this.resetTrigger.reset$.subscribe(() => {
+      this.resetDigMode();
+    });
+
     this.ngZone.runOutsideAngular(() => {
       setInterval(() => {
         if (this.environment) {
@@ -119,6 +135,12 @@ export class App implements AfterViewInit {
         }
       }, 50);
     });
+  }
+
+  ngOnDestroy() {
+    if (this.resetSubscription) {
+      this.resetSubscription.unsubscribe();
+    }
   }
 
   hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -149,5 +171,65 @@ export class App implements AfterViewInit {
     this.window_height = window.innerHeight;
     this.cell_size = this.window_height / this.grid_size;
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
+  }
+
+  private lastKeyPressTime: number = 0;
+
+  @HostListener('window:keydown', ['$event'])
+  onKeyDown(event: KeyboardEvent) {
+    if (event.key === 'b' || event.key === 'B') {
+      // Debounce to prevent rapid toggling
+      const now = Date.now();
+      if (now - this.lastKeyPressTime < 200) return; // Ignore if pressed within 200ms
+      this.lastKeyPressTime = now;
+
+      this.toggleDigMode();
+    }
+  }
+
+  resetDigMode() {
+    this.digMode = false;
+    this.digModeParams = [
+      { name: 'Mode', value: 'OFF' }
+    ];
+
+    // Update physics bodies for all diggable objects
+    if (this.environment?.diggingField) {
+      this.environment.diggingField.setDigMode(false);
+    }
+  }
+
+  toggleDigMode() {
+    if (!this.environment?.diggingField) return;
+
+    // If trying to turn ON (grab)
+    if (!this.digMode) {
+      // Only allow if orbs are in grab zone AND no orbs currently grabbed
+      const canGrab = this.environment.diggingField.canGrab();
+      const hasGrabbed = this.environment.diggingField.hasGrabbedOrbs();
+
+      if (!canGrab) {
+        console.log('No orbs in grab zone - cannot grab');
+        return;
+      }
+
+      if (hasGrabbed) {
+        console.log('Already holding orbs - release first');
+        return;
+      }
+
+      // Perform grab
+      this.digMode = true;
+      this.environment.diggingField.setDigMode(true);
+    } else {
+      // Turn OFF (release)
+      this.digMode = false;
+      this.environment.diggingField.setDigMode(false);
+    }
+
+    // Update UI
+    this.digModeParams = [
+      { name: 'Mode', value: this.digMode ? 'ON' : 'OFF' }
+    ];
   }
 }
