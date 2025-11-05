@@ -2,20 +2,32 @@
   <div class="header">Detected Diggables</div>
 
   <div class="table">
-    <!-- Header Row -->
-    <div class="table-header">
-      <div class="cell">Object</div>
-      <div class="cell">x</div>
-      <div class="cell">y</div>
+    <!-- Object Number Row -->
+    <div class="table-row">
+      <div class="param-label">#</div>
+      @for (diggable of detectedDiggables; track $index) {
+        <div class="cell name-cell" [class.empty-cell]="diggable.name === '—'">{{ diggable.name }}</div>
+      }
     </div>
 
-    <!-- Data Rows -->
-    @for (diggable of detectedDiggables; track $index) {
-      <div class="table-row" [class.empty-row]="diggable.name === '—'">
-        <div class="cell name-cell">{{ diggable.name }}</div>
-        <div class="cell value-cell">{{ diggable.x }}<span class="unit">{{ diggable.x !== '—' ? 'm' : '' }}</span></div>
-        <div class="cell value-cell">{{ diggable.y }}<span class="unit">{{ diggable.y !== '—' ? 'm' : '' }}</span></div>
-      </div>
-    }
+    <!-- X Coordinate Row -->
+    <div class="table-row">
+      <div class="param-label">x</div>
+      @for (diggable of detectedDiggables; track $index) {
+        <div class="cell value-cell" [class.empty-cell]="diggable.x === '—'">
+          {{ diggable.x }}<span class="unit">{{ diggable.x !== '—' ? 'm' : '' }}</span>
+        </div>
+      }
+    </div>
+
+    <!-- Y Coordinate Row -->
+    <div class="table-row">
+      <div class="param-label">y</div>
+      @for (diggable of detectedDiggables; track $index) {
+        <div class="cell value-cell" [class.empty-cell]="diggable.y === '—'">
+          {{ diggable.y }}<span class="unit">{{ diggable.y !== '—' ? 'm' : '' }}</span>
+        </div>
+      }
+    </div>
   </div>
 </div>

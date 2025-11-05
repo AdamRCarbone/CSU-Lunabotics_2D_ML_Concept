@@ -50,20 +50,20 @@ export class Frustum implements OnInit {
     const zoneDisplayObjects = this.environment.zoneDisplay?.collidableObjects || [];
     const allCollidableObjects = [...obstacleFieldObjects, ...zoneDisplayObjects];
 
-    // Detect objects within frustum
+    // Detect collidable objects within frustum
     for (const obj of allCollidableObjects) {
       if (this.isObjectInFrustum(obj, state.x, state.y, state.angle)) {
         this.detectedCollidableObjects.push(obj);
       }
     }
 
-    // TODO: Add diggable objects detection when available
-    // const diggableObjects = this.environment.diggableField?.diggableObjects || [];
-    // for (const obj of diggableObjects) {
-    //   if (this.isObjectInFrustum(obj, state.x, state.y, state.angle)) {
-    //     this.detectedDiggableObjects.push(obj);
-    //   }
-    // }
+    // Detect diggable objects (regolith orbs) within frustum
+    const diggableObjects = this.environment.diggingField?.diggableObjects || [];
+    for (const obj of diggableObjects) {
+      if (this.isObjectInFrustum(obj, state.x, state.y, state.angle)) {
+        this.detectedDiggableObjects.push(obj);
+      }
+    }
   }
 
   // Check if an object is within the frustum area (using object bounds, not just center)

@@ -24,12 +24,13 @@ export class DetectedDiggableComponent {
   @Input() diggables: DiggableObject[] = [];
 
   get detectedDiggables(): DetectedDiggableData[] {
-    const maxDiggables = 4;
+    const maxDiggables = 10;
     const detected: DetectedDiggableData[] = this.diggables.map(obj => {
-      const name = obj.name?.split('_')[0] || 'Regolith';
+      // Extract number from name like "Regolith_5" -> "5"
+      const number = obj.name?.split('_')[1] || '?';
 
       return {
-        name: name,
+        name: number,
         x: obj.x_meters.toFixed(2),
         y: obj.y_meters.toFixed(2)
       };
