@@ -7,12 +7,13 @@ import { UniversalSliderComponent } from './Components/universal_slider/universa
 import { ParameterDisplay, Parameter } from "./Components/parameter_display/parameter-display";
 import { ZoneLegend } from './Components/zone-legend/zone-legend';
 import { DetectedObstacles } from './Components/detected-obstacles/detected-obstacles';
+import { DetectedDiggableComponent } from './Components/detected-diggable/detected-diggable';
 import { Zone } from './enums/zone.enum';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -85,6 +86,10 @@ export class App implements AfterViewInit {
 
   get detectedObstacles() {
     return this.environment?.frustum?.detectedCollidableObjects || [];
+  }
+
+  get detectedDiggables() {
+    return this.environment?.frustum?.detectedDiggableObjects || [];
   }
 
   ngAfterViewInit() {

@@ -34,16 +34,19 @@
 
 <main class="main">
   <div class="content">
-    <div style="display: flex; flex-direction: column; gap: 1rem;">
-      <app-zone-legend class="zone-legend-display" [currentZone]="currentZone"></app-zone-legend>
+    <app-zone-legend class="zone-legend-display" [currentZone]="currentZone"></app-zone-legend>
 
-      <app-detected-obstacles [obstacles]="detectedObstacles"></app-detected-obstacles>
+    <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
+      <app-environment
+        [roverSpeedMultiplier]="speedValue"
+        [roverTargetHeading]="rotationValue">
+      </app-environment>
+
+      <div style="display: flex; gap: 1rem; width: 100%;">
+        <app-detected-obstacles [obstacles]="detectedObstacles"></app-detected-obstacles>
+        <app-detected-diggable [diggables]="detectedDiggables"></app-detected-diggable>
+      </div>
     </div>
-
-    <app-environment
-      [roverSpeedMultiplier]="speedValue"
-      [roverTargetHeading]="rotationValue">
-    </app-environment>
     <div class="slider-panel">
       <app-universal-slider
         [(value)]="speedValue"
