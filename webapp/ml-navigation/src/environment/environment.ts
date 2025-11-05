@@ -51,7 +51,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
 
   // GRID & SCALING
   public grid_size = 50; // Grid divisions for visualization
-  public xy_scale_factor: number = 10; // Window height scaling factor
+  public xy_scale_factor: number = 8; // Window height scaling factor
 
 
   @ViewChild('canvasContainer', { static: true }) canvasContainer!: ElementRef;

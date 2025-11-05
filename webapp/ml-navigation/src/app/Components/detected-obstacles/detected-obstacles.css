@@ -6,7 +6,8 @@
   background: rgba(0, 0, 0, 0.05);
   border-radius: 1rem;
   font-family: system-ui, -apple-system, sans-serif;
-  flex: 1;
+  width: 100%;
+  min-width: 240px;
 }
 
 .header {
@@ -36,6 +37,11 @@
   color: #8e4cff;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.table-header .cell {
+  justify-content: center;
 }
 
 .table-row {
@@ -56,6 +62,7 @@
 .cell {
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .name-cell {
@@ -70,7 +77,6 @@
   font-weight: 400;
   color: #1c1b1f;
   font-variant-numeric: tabular-nums;
-  justify-content: flex-end;
 }
 
 .unit {

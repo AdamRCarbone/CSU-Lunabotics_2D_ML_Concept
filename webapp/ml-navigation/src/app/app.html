@@ -27,6 +27,13 @@
     gap: 1rem;
   }
 
+  .detection-panels {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    justify-content: space-between;
+  }
+
   router-outlet {
     display: none;
   }
@@ -36,17 +43,16 @@
   <div class="content">
     <app-zone-legend class="zone-legend-display" [currentZone]="currentZone"></app-zone-legend>
 
-    <div style="display: flex; flex-direction: column; gap: 1rem; align-items: center;">
-      <app-environment
-        [roverSpeedMultiplier]="speedValue"
-        [roverTargetHeading]="rotationValue">
-      </app-environment>
+    <app-environment
+      [roverSpeedMultiplier]="speedValue"
+      [roverTargetHeading]="rotationValue">
+    </app-environment>
 
-      <div style="display: flex; gap: 1rem; width: 100%;">
-        <app-detected-obstacles [obstacles]="detectedObstacles"></app-detected-obstacles>
-        <app-detected-diggable [diggables]="detectedDiggables"></app-detected-diggable>
-      </div>
+    <div class="detection-panels" [style.height.px]="environment?.environment_height_px">
+      <app-detected-obstacles [obstacles]="detectedObstacles"></app-detected-obstacles>
+      <app-detected-diggable [diggables]="detectedDiggables"></app-detected-diggable>
     </div>
+
     <div class="slider-panel">
       <app-universal-slider
         [(value)]="speedValue"
