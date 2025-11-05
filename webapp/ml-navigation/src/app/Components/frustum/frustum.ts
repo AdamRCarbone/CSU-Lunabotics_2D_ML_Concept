@@ -23,7 +23,7 @@ export class Frustum implements OnInit {
   environment = inject(EnvironmentComponent);
 
   // Frustum properties (configurable)
-  public depth: number = 1.5; // Depth of frustum in meters
+  public depth: number = 1.75; // Depth of frustum in meters
   public farWidth: number = 2; // Width at far end in meters
   public farRadius: number = 0.5; // Radius for rounded corners at far end in meters
   public color: string = '#8e4cff';
@@ -45,11 +45,13 @@ export class Frustum implements OnInit {
     const state = this.environment.physicsEngine.getRoverState();
     if (!state) return;
 
-    // Get collidable objects from obstacle field
-    const collidableObjects = this.environment.obstacleField?.collidableObjects || [];
+    // Get collidable objects from obstacle field and zone display
+    const obstacleFieldObjects = this.environment.obstacleField?.collidableObjects || [];
+    const zoneDisplayObjects = this.environment.zoneDisplay?.collidableObjects || [];
+    const allCollidableObjects = [...obstacleFieldObjects, ...zoneDisplayObjects];
 
     // Detect objects within frustum
-    for (const obj of collidableObjects) {
+    for (const obj of allCollidableObjects) {
       if (this.isObjectInFrustum(obj, state.x, state.y, state.angle)) {
         this.detectedCollidableObjects.push(obj);
       }
@@ -150,7 +152,7 @@ export class Frustum implements OnInit {
     p.translate(x, y);
     p.rotate(angle);
 
-    // Draw frustum shape (trapezoid with flat far edge)
+    // Draw frustum shape (trapezoid with rounded far corners)
     p.fill(rgb.r, rgb.g, rgb.b, this.opacity);
     p.stroke(rgb.r, rgb.g, rgb.b, this.opacity * 2);
     p.strokeWeight(1);
@@ -164,13 +166,36 @@ export class Frustum implements OnInit {
     const farLeft = { x: -farWidthPx / 2, y: -depthPx };
     const farRight = { x: farWidthPx / 2, y: -depthPx };
 
-    // Draw the trapezoid with flat far edge
-    p.beginShape();
-    p.vertex(nearLeft.x, nearLeft.y);
-    p.vertex(nearRight.x, nearRight.y);
-    p.vertex(farRight.x, farRight.y);
-    p.vertex(farLeft.x, farLeft.y);
-    p.endShape(p.CLOSE);
+    // Corner radius for far edge
+    const cornerRadius = Math.min(farWidthPx * 0.075, depthPx * 0.05);
+
+    // Draw the trapezoid with rounded far corners using path
+    const ctx = (p as any).drawingContext as CanvasRenderingContext2D;
+    ctx.beginPath();
+
+    // Start at near left
+    ctx.moveTo(nearLeft.x, nearLeft.y);
+    ctx.lineTo(nearRight.x, nearRight.y);
+
+    // Right edge to far corner
+    ctx.lineTo(farRight.x, farRight.y + cornerRadius);
+
+    // Rounded top-right corner
+    ctx.arcTo(farRight.x, farRight.y, farRight.x - cornerRadius, farRight.y, cornerRadius);
+
+    // Top edge
+    ctx.lineTo(farLeft.x + cornerRadius, farLeft.y);
+
+    // Rounded top-left corner
+    ctx.arcTo(farLeft.x, farLeft.y, farLeft.x, farLeft.y + cornerRadius, cornerRadius);
+
+    // Left edge back to start
+    ctx.lineTo(farLeft.x, farLeft.y + cornerRadius);
+    ctx.lineTo(nearLeft.x, nearLeft.y);
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
     p.pop();
   }

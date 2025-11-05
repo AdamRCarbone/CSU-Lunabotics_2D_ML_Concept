@@ -118,7 +118,7 @@ export class ZoneDisplay {
       width_meters: this.columnZone_width_meters,
       height_meters: this.columnZone_height_meters,
       color: this.columnZone_color,
-      name: 'Column Post'
+      name: 'Post'
     });
     this.collidableObjects.push(columnPost);
   }
