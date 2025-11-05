@@ -7,18 +7,20 @@ import { Subscription } from 'rxjs';
 import { App } from '../app/app';
 import { ZoneDisplay } from '../app/Components/zone_display/zone-display';
 import { ObstacleField } from '../app/Components/obstacle_field/obstacle-field';
+import { Frustum } from '../app/Components/frustum/frustum';
 import { PhysicsEngine } from '../app/physics/physics-engine';
 import { Zone } from '../app/enums/zone.enum';
 
 @Component({
   selector: 'app-environment',
   standalone: true,
-  imports: [RoverComponent, ZoneDisplay, ObstacleField],
+  imports: [RoverComponent, ZoneDisplay, ObstacleField, Frustum],
   template: `
     <div #canvasContainer></div>
     <app-rover #rover></app-rover>
     <app-zone-display #zoneDisplay></app-zone-display>
     <app-obstacle-field #obstacleField></app-obstacle-field>
+    <app-frustum #frustum></app-frustum>
   `,
   styleUrls: ['./environment.css']
 })
@@ -54,6 +56,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   @ViewChild('rover', { static: true }) rover!: RoverComponent;
   @ViewChild('zoneDisplay', { static: true }) zoneDisplay!: ZoneDisplay;
   @ViewChild('obstacleField', { static: true }) obstacleField!: ObstacleField;
+  @ViewChild('frustum', { static: true }) frustum!: Frustum;
 
   @Input() set roverSpeedMultiplier(value: number) {
     if (this.rover) {
@@ -167,15 +170,45 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       };
 
       p.draw = () => {
-        p.fill(220);
-        p.stroke(150);
-
         const sw = this.environment_stroke_weight_px;
-        p.strokeWeight(sw);
         const strokeOffset = sw / 2;
 
-        // Draw at full dimensions - stroke will extend outside (centered on edge)
+        // Clear background
+        p.background(255);
+
+        // Use erase mode to create clipping by drawing everything to background,
+        // then using blend mode to composite only inside the rounded rect
+        p.push();
+
+        // Draw environment background with stroke
+        p.fill(220);
+        p.stroke(150);
+        p.strokeWeight(sw);
         p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+
+        // Create a clipping region using drawingContext (raw canvas API)
+        const ctx = (p as any).drawingContext as CanvasRenderingContext2D;
+        ctx.save();
+        ctx.beginPath();
+
+        // Create rounded rectangle path manually
+        const x = strokeOffset;
+        const y = strokeOffset;
+        const w = this.environment_width_px;
+        const h = this.environment_height_px;
+        const r = this.environment_border_radius_px;
+
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+        ctx.clip();
 
         // Update physics engine
         this.physicsEngine.update();
@@ -186,12 +219,21 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         this.obstacleField.update(p);  // Update obstacle field
         this.obstacleField.draw(p);    // Render obstacles
 
+        this.frustum.update(p);        // Update frustum
+        this.frustum.draw(p);          // Render frustum (before rover so it's behind)
+
         this.rover.update(p);          // Update rover
         this.rover.draw(p);            // Render rover
 
+        ctx.restore(); // End clipping
+
+        // Redraw border on top
         p.noFill();
         p.stroke(150);
+        p.strokeWeight(sw);
         p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+
+        p.pop();
 
       };
 
