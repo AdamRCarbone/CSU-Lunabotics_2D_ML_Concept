@@ -222,7 +222,7 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
         this.obstacleField.update(p);  // Update obstacle field
         this.obstacleField.draw(p);    // Render obstacles
 
-        this.diggingField.update(p);   // Update digging field
+        this.diggingField.update();    // Update digging field
         this.diggingField.draw(p);     // Render diggable orbs
 
         this.frustum.update(p);        // Update frustum

@@ -7,6 +7,7 @@ import p5 from 'p5';
 import { ResetTrigger } from '../../services/reset-trigger';
 import { ZoneDisplay } from '../zone_display/zone-display';
 import { ObstacleField } from '../obstacle_field/obstacle-field';
+import { Body } from 'matter-js';
 
 export class DiggableObject {
   x_meters: number;
@@ -14,6 +15,7 @@ export class DiggableObject {
   radius_meters: number;
   color: string;
   name: string;
+  physicsBody?: Body; // Add physics body reference
 
   constructor(config: {
     x_meters: number;
@@ -80,6 +82,11 @@ export class DiggingField implements OnInit, OnDestroy {
 
   // Generate random regolith orbs in excavation zone (and starting zone)
   private generateDiggables() {
+    // Clear existing physics bodies
+    if (this.environment.physicsEngine) {
+      this.environment.physicsEngine.clearDiggables();
+    }
+
     this.diggableObjects = [];
     const maxAttempts = 100; // Max attempts per orb to find valid position
 
@@ -95,6 +102,21 @@ export class DiggingField implements OnInit, OnDestroy {
           color: '#8B4513', // Brown color
           name: `Regolith_${i}`
         });
+
+        // Create physics body for the orb (convert meters to pixels)
+        if (this.environment.physicsEngine) {
+          const x_px = this.environment.metersToPixels(position.x);
+          const y_px = this.environment.environment_height_px - this.environment.metersToPixels(position.y);
+          const radius_px = this.environment.metersToPixels(this.orbRadius);
+
+          orb.physicsBody = this.environment.physicsEngine.addDiggable(
+            x_px,
+            y_px,
+            radius_px,
+            `Regolith_${i}`
+          );
+        }
+
         this.diggableObjects.push(orb);
       }
     }
@@ -207,14 +229,29 @@ export class DiggingField implements OnInit, OnDestroy {
   }
 
   draw(p: p5) {
-    // Draw all regolith orbs
+    // Draw all regolith orbs using physics body positions
     for (const obj of this.diggableObjects) {
       const color = obj.color || '#8B4513';
       const rgb = this.app.hexToRgb(color) ?? { r: 139, g: 69, b: 19 };
 
-      // Convert meters to pixels
-      const x_px = this.environment.metersToPixels(obj.x_meters);
-      const y_px = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters); // Flip Y
+      // Get position from physics body if it exists
+      let x_px: number;
+      let y_px: number;
+
+      if (obj.physicsBody) {
+        // Use physics body position (already in pixels)
+        x_px = obj.physicsBody.position.x;
+        y_px = obj.physicsBody.position.y;
+
+        // Update meters position for detection
+        obj.x_meters = this.environment.pixelsToMeters(x_px);
+        obj.y_meters = this.environment.pixelsToMeters(this.environment.environment_height_px - y_px);
+      } else {
+        // Fallback to stored position
+        x_px = this.environment.metersToPixels(obj.x_meters);
+        y_px = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters);
+      }
+
       const radius_px = this.environment.metersToPixels(obj.radius_meters);
 
       // Draw circle

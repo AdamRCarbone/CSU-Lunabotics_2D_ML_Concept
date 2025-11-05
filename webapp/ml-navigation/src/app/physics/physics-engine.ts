@@ -3,7 +3,7 @@ import p5 from 'p5';
 
 export interface PhysicsObject {
   body: Body;
-  type: 'rover' | 'obstacle' | 'wall' | 'zone';
+  type: 'rover' | 'obstacle' | 'wall' | 'zone' | 'diggable';
   render?: (p: p5) => void;
 }
 
@@ -128,6 +128,24 @@ export class PhysicsEngine {
     return obstacle;
   }
 
+  // Add pushable diggable object (regolith orb)
+  addDiggable(x: number, y: number, radius: number, label: string = 'regolith'): Body {
+    const diggable = Bodies.circle(x, y, radius, {
+      isStatic: false, // Make it dynamic (pushable)
+      label: label,
+      restitution: 0.1, // Low bounce
+      friction: 0.9, // High friction with other surfaces
+      frictionAir: 0.3, // High air resistance to stop sliding quickly
+      density: 0.001, // Light weight so it's easy to push
+      inertia: Infinity // Prevent rotation
+    });
+
+    World.add(this.world, diggable);
+    this.objects.set(diggable.id, { body: diggable, type: 'diggable' });
+
+    return diggable;
+  }
+
   // Apply force to rover (for movement)
   moveRover(force: Vector) {
     if (this.roverBody) {
@@ -221,6 +239,22 @@ export class PhysicsEngine {
     // Remove from our tracking map
     this.objects.forEach((obj, id) => {
       if (obj.type === 'obstacle') {
+        this.objects.delete(id);
+      }
+    });
+  }
+
+  // Clear all diggable objects
+  clearDiggables() {
+    const diggableBodies = Array.from(this.objects.entries())
+      .filter(([_, obj]) => obj.type === 'diggable')
+      .map(([_, obj]) => obj.body);
+
+    Composite.remove(this.world, diggableBodies);
+
+    // Remove from our tracking map
+    this.objects.forEach((obj, id) => {
+      if (obj.type === 'diggable') {
         this.objects.delete(id);
       }
     });
