@@ -1,14 +1,14 @@
 # TensorFlow and RL framework
-tensorflow==2.18.0
-tf-agents==0.21.0
-tf-keras==2.18.0
+tensorflow==2.17.0
+tf-agents==0.19.0
+tf-keras==2.17.0
 
 # Environment
 gymnasium==0.29.1
 numpy>=1.24.0,<2.0.0
 
 # Visualization and monitoring
-tensorboard==2.18.0
+tensorboard==2.17.0
 matplotlib==3.9.0
 
 # Web server for Angular dashboard
