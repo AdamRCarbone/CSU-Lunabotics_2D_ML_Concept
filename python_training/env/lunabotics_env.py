@@ -99,7 +99,8 @@ class LunaboticsEnv(gym.Env):
         obs_dim = 8 + (self.max_detected_obstacles * 2) + (self.max_detected_orbs * 2)
 
         # Define reasonable bounds for TF-Agents compatibility
-        obs_low = np.array([
+        # Build low bounds
+        obs_low_list = [
             0.0,  # rover_x (min)
             0.0,  # rover_y (min)
             -10.0,  # rover_vx (min velocity)
@@ -108,10 +109,14 @@ class LunaboticsEnv(gym.Env):
             -10.0,  # rover_angular_vel (min)
             0.0,  # zone (min)
             0.0,  # holding_orb (min)
-        ] + [0.0, -np.pi] * (self.max_detected_obstacles + self.max_detected_orbs),  # distances and angles
-        dtype=np.float32)
+        ]
+        # Add detection bounds (distance, angle pairs)
+        for _ in range(self.max_detected_obstacles + self.max_detected_orbs):
+            obs_low_list.extend([0.0, -np.pi])  # dist min, angle min
+        obs_low = np.array(obs_low_list, dtype=np.float32)
 
-        obs_high = np.array([
+        # Build high bounds
+        obs_high_list = [
             self.world_width,  # rover_x (max)
             self.world_height,  # rover_y (max)
             10.0,  # rover_vx (max velocity)
@@ -120,8 +125,11 @@ class LunaboticsEnv(gym.Env):
             10.0,  # rover_angular_vel (max)
             6.0,  # zone (max - 6 zones)
             1.0,  # holding_orb (max)
-        ] + [10.0, np.pi] * (self.max_detected_obstacles + self.max_detected_orbs),  # distances and angles
-        dtype=np.float32)
+        ]
+        # Add detection bounds (distance, angle pairs)
+        for _ in range(self.max_detected_obstacles + self.max_detected_orbs):
+            obs_high_list.extend([10.0, np.pi])  # dist max, angle max
+        obs_high = np.array(obs_high_list, dtype=np.float32)
 
         self.observation_space = spaces.Box(
             low=obs_low,
