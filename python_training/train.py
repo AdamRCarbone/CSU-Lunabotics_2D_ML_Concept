@@ -11,7 +11,9 @@ import tensorflow as tf
 from pathlib import Path
 
 # TF-Agents imports
-from tf_agents.environments import suite_gym, tf_py_environment
+from tf_agents.environments import py_environment, tf_py_environment, utils
+from tf_agents.specs import array_spec
+from tf_agents.trajectories import time_step as ts
 from tf_agents.replay_buffers import tf_uniform_replay_buffer
 from tf_agents.trajectories import trajectory
 from tf_agents.utils import common
@@ -28,15 +30,61 @@ def load_config(config_path: str) -> dict:
         return yaml.safe_load(f)
 
 
+class GymnasiumWrapper(py_environment.PyEnvironment):
+    """Wrapper to convert Gymnasium environment to TF-Agents PyEnvironment"""
+
+    def __init__(self, gym_env):
+        super().__init__()
+        self._gym_env = gym_env
+
+        # Convert Gym spaces to TF-Agents specs
+        self._observation_spec = array_spec.BoundedArraySpec(
+            shape=gym_env.observation_space.shape,
+            dtype=gym_env.observation_space.dtype,
+            minimum=gym_env.observation_space.low,
+            maximum=gym_env.observation_space.high,
+            name='observation'
+        )
+
+        self._action_spec = array_spec.BoundedArraySpec(
+            shape=gym_env.action_space.shape,
+            dtype=gym_env.action_space.dtype,
+            minimum=gym_env.action_space.low,
+            maximum=gym_env.action_space.high,
+            name='action'
+        )
+
+    def observation_spec(self):
+        return self._observation_spec
+
+    def action_spec(self):
+        return self._action_spec
+
+    def _reset(self):
+        obs, _ = self._gym_env.reset()
+        return ts.restart(obs)
+
+    def _step(self, action):
+        obs, reward, terminated, truncated, info = self._gym_env.step(action)
+
+        if terminated:
+            return ts.termination(obs, reward)
+        elif truncated:
+            return ts.truncation(obs, reward)
+        else:
+            return ts.transition(obs, reward)
+
+
 def create_environment(env_config: dict, reward_config: dict):
     """Create TF-Agents wrapped environment"""
 
-    # Create custom Gym environment
-    def env_constructor():
-        return LunaboticsEnv(env_config, reward_config)
+    # Create custom Gymnasium environment
+    gym_env = LunaboticsEnv(env_config, reward_config)
 
-    # Wrap with TF-Agents
-    py_env = suite_gym.wrap_env(env_constructor())
+    # Wrap with custom TF-Agents wrapper
+    py_env = GymnasiumWrapper(gym_env)
+
+    # Wrap with TF environment
     tf_env = tf_py_environment.TFPyEnvironment(py_env)
 
     return tf_env
