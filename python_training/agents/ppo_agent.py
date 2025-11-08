@@ -45,12 +45,7 @@ def create_ppo_agent(
         observation_spec,
         action_spec,
         fc_layer_params=tuple(actor_fc_layers),
-        activation_fn=tf.keras.activations.tanh,
-        # Continuous actions use Normal distribution
-        continuous_projection_net=lambda action_spec: _NormalProjectionNetwork(
-            action_spec,
-            init_means_output_factor=0.1
-        )
+        activation_fn=tf.keras.activations.tanh
     )
 
     # Create value network (critic)
@@ -89,51 +84,6 @@ def create_ppo_agent(
     agent.initialize()
 
     return agent
-
-
-class _NormalProjectionNetwork(tf.keras.layers.Layer):
-    """
-    Custom projection network for continuous actions.
-    Outputs mean and log_std for a Normal distribution.
-    """
-
-    def __init__(self, action_spec, init_means_output_factor=0.1, **kwargs):
-        super(_NormalProjectionNetwork, self).__init__(**kwargs)
-        self._action_spec = action_spec
-        self._init_means_output_factor = init_means_output_factor
-
-        # Get action dimension
-        self._action_dim = action_spec.shape[0]
-
-        # Create layers for mean
-        self._means_layer = tf.keras.layers.Dense(
-            self._action_dim,
-            activation=None,
-            kernel_initializer=tf.keras.initializers.VarianceScaling(
-                scale=self._init_means_output_factor
-            ),
-            name='means_projection'
-        )
-
-        # Create layers for log standard deviation
-        self._log_std_layer = tf.keras.layers.Dense(
-            self._action_dim,
-            activation=None,
-            kernel_initializer=tf.keras.initializers.Constant(-0.5),
-            name='log_std_projection'
-        )
-
-    def call(self, inputs):
-        means = self._means_layer(inputs)
-        log_stds = self._log_std_layer(inputs)
-
-        # Clip log_stds to reasonable range
-        log_stds = tf.clip_by_value(log_stds, -20.0, 2.0)
-
-        # Scale means to action range
-        means = tf.nn.tanh(means)  # Output in [-1, 1]
-
-        return means, log_stds
 
 
 def create_checkpointer(agent, checkpoint_dir: str):
