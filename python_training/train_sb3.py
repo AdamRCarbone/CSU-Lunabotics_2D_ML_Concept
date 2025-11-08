@@ -27,17 +27,19 @@ def load_config(config_path: str) -> dict:
 
 class MetricsCallback(BaseCallback):
     """
-    Custom callback for streaming metrics to dashboard
+    Custom callback for streaming metrics to dashboard and saving checkpoints
     """
 
-    def __init__(self, metrics_server, config, verbose=0):
+    def __init__(self, metrics_server, config, checkpoint_dir, verbose=0):
         super().__init__(verbose)
         self.metrics_server = metrics_server
         self.config = config
+        self.checkpoint_dir = Path(checkpoint_dir)
         self.episode_rewards = []
         self.episode_lengths = []
         self.episode_count = 0
         self.start_time = time.time()
+        self.checkpoint_interval = 100  # Save every 100 episodes (change this if you want)
 
     def _on_step(self) -> bool:
         # This is called after every step
@@ -100,6 +102,12 @@ class MetricsCallback(BaseCallback):
                         print(f"  FPS: {fps}")
                         print(f"  Total Steps: {self.num_timesteps}")
 
+                    # Save checkpoint every N episodes
+                    if self.episode_count % self.checkpoint_interval == 0:
+                        checkpoint_path = self.checkpoint_dir / f"model_episode_{self.episode_count}"
+                        self.model.save(checkpoint_path)
+                        print(f"\n✓ Checkpoint saved: {checkpoint_path}.zip")
+
 
 def train(config_path: str):
     """Main training loop with Stable-Baselines3"""
@@ -157,7 +165,7 @@ def train(config_path: str):
     )
 
     # Create callback
-    callback = MetricsCallback(metrics_server, config)
+    callback = MetricsCallback(metrics_server, config, checkpoint_dir)
 
     # Training
     print("\n" + "="*60)
