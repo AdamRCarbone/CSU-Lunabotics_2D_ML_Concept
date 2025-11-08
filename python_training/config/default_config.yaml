@@ -1,0 +1,82 @@
+# Lunabotics RL Training Configuration
+
+# Environment settings
+environment:
+  world_width: 6.8  # meters
+  world_height: 5.0  # meters
+  rover_length: 1.5  # meters
+  rover_width: 1.0   # meters
+  max_speed: 2.0     # m/s
+  max_angular_velocity: 3.14159  # rad/s (180 deg/s)
+  dt: 0.0167  # timestep (60 FPS)
+
+  # Objects
+  num_rocks: 7
+  num_craters: 4
+  num_orbs: 15
+
+  # Detection frustum
+  frustum_depth: 1.75  # meters
+  frustum_far_width: 2.0  # meters
+
+# Training settings
+training:
+  max_episodes: 10000
+  max_steps_per_episode: 1000
+  timescale: 1.0  # Can increase for faster training (no rendering anyway)
+
+  # PPO hyperparameters
+  learning_rate: 0.0003
+  batch_size: 512
+  num_epochs: 10
+  discount_factor: 0.99
+  lambda_gae: 0.95  # Generalized Advantage Estimation
+
+  # Network architecture
+  actor_fc_layers: [256, 256]
+  value_fc_layers: [256, 256]
+
+  # Replay buffer
+  replay_buffer_capacity: 100000
+
+  # Checkpointing
+  save_interval: 1000  # Save every N steps
+  checkpoint_dir: "./checkpoints"
+
+  # Logging
+  log_interval: 10  # Log metrics every N episodes
+  tensorboard_dir: "./logs"
+
+  # Early stopping
+  target_reward: 1000.0  # Stop if average reward exceeds this
+  patience: 100  # Stop if no improvement for N episodes
+
+# Reward function weights
+rewards:
+  # Positive rewards
+  reach_excavation_zone: 10.0
+  collect_orb: 50.0
+  reach_construction_zone_with_orb: 100.0
+  deposit_orb: 200.0
+
+  # Negative rewards
+  collision_obstacle: -10.0
+  collision_wall: -5.0
+  out_of_bounds: -20.0
+
+  # Shaping rewards (small incremental rewards to guide learning)
+  progress_toward_excavation: 1.0
+  progress_toward_construction: 2.0
+  face_toward_target: 0.5
+
+  # Time penalty (encourages efficiency)
+  time_step: -0.01
+
+# WebSocket server for Angular dashboard
+server:
+  host: "localhost"
+  port: 5000
+  update_interval: 0.5  # seconds between metric updates
+
+# Random seed for reproducibility
+seed: 42

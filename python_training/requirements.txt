@@ -1,0 +1,23 @@
+# TensorFlow and RL framework
+tensorflow==2.18.0
+tf-agents==0.21.0
+tf-keras==2.18.0
+
+# Environment
+gymnasium==0.29.1
+numpy>=1.24.0,<2.0.0
+
+# Visualization and monitoring
+tensorboard==2.18.0
+matplotlib==3.9.0
+
+# Web server for Angular dashboard
+flask==3.0.3
+flask-cors==5.0.0
+flask-socketio==5.3.7
+python-socketio==5.11.4
+eventlet==0.36.1
+
+# Utilities
+pyyaml==6.0.2
+tqdm==4.66.5

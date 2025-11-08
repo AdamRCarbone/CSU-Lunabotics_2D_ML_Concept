@@ -1,0 +1,107 @@
+<div class="training-monitor-container">
+  <!-- Header -->
+  <div class="header">
+    <h1>RL Training Monitor</h1>
+    <div class="status-indicator" [style.background-color]="getStatusColor()">
+      {{ getStatusText() }}
+    </div>
+  </div>
+
+  <!-- Control Panel -->
+  <div class="control-panel">
+    <div class="controls">
+      <button
+        class="btn btn-success"
+        [disabled]="isTraining || !isConnected"
+        (click)="startTraining()">
+        Start Training
+      </button>
+      <button
+        class="btn btn-danger"
+        [disabled]="!isTraining || !isConnected"
+        (click)="stopTraining()">
+        Stop Training
+      </button>
+      <button
+        class="btn btn-primary"
+        [disabled]="!isConnected"
+        (click)="saveModel()">
+        Save Model
+      </button>
+    </div>
+  </div>
+
+  <!-- Metrics Grid -->
+  <div class="metrics-grid" *ngIf="currentMetrics">
+    <div class="metric-card">
+      <div class="metric-label">Episode</div>
+      <div class="metric-value">{{ currentMetrics.episode }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Total Steps</div>
+      <div class="metric-value">{{ currentMetrics.step }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Episode Reward</div>
+      <div class="metric-value">{{ formatNumber(currentMetrics.episode_reward, 1) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Avg Reward (100)</div>
+      <div class="metric-value">{{ formatNumber(currentMetrics.avg_reward_100, 1) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Episode Length</div>
+      <div class="metric-value">{{ currentMetrics.episode_length }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Loss</div>
+      <div class="metric-value">{{ formatNumber(currentMetrics.loss, 4) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Success Rate</div>
+      <div class="metric-value">{{ formatNumber(currentMetrics.success_rate * 100, 1) }}%</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Steps/sec</div>
+      <div class="metric-value">{{ formatNumber(currentMetrics.steps_per_sec, 1) }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Orbs Collected</div>
+      <div class="metric-value">{{ currentMetrics.orbs_collected }}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Orbs Deposited</div>
+      <div class="metric-value">{{ currentMetrics.orbs_deposited }}</div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-container">
+    <div class="chart-card">
+      <h3>Reward Progress</h3>
+      <div class="chart-wrapper">
+        <canvas id="rewardChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Training Loss</h3>
+      <div class="chart-wrapper">
+        <canvas id="lossChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card">
+      <h3>Success Rate</h3>
+      <div class="chart-wrapper">
+        <canvas id="successChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection Status Message -->
+  <div class="connection-message" *ngIf="!isConnected">
+    <p>Waiting for connection to training server...</p>
+    <p class="hint">Make sure the Python training script is running on localhost:5000</p>
+  </div>
+</div>
