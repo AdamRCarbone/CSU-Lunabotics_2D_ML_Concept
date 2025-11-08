@@ -39,7 +39,7 @@ class MetricsCallback(BaseCallback):
         self.episode_lengths = []
         self.episode_count = 0
         self.start_time = time.time()
-        self.checkpoint_interval = 100  # Save every 100 episodes (change this if you want)
+        self.checkpoint_interval = 10000  # Save every 10k episodes (change this if you want)
 
     def _on_step(self) -> bool:
         # This is called after every step
