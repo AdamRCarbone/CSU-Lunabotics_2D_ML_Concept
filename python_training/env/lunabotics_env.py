@@ -55,14 +55,27 @@ class LunaboticsEnv(gym.Env):
 
     metadata = {"render_modes": ["none"], "render_fps": 60}
 
-    def __init__(self, env_config: Optional[Dict] = None, reward_config: Optional[Dict] = None):
+    def __init__(self, env_config: Optional[Dict] = None, reward_config: Optional[Dict] = None, reward_stage: int = 4):
         super().__init__()
+
+        # Import stage configs
+        from env.ml_config import (STAGE_1_DRIVING_CONTROL, STAGE_2_NAVIGATION,
+                                     STAGE_3_ORB_COLLECTION, STAGE_4_FULL_TASK)
 
         # Use ML config
         if env_config is None:
             env_config = MLConfig.get_env_config()
+
+        # Select reward config based on stage
         if reward_config is None:
-            reward_config = RewardCalculator.get_default_config()
+            stage_configs = {
+                1: STAGE_1_DRIVING_CONTROL,
+                2: STAGE_2_NAVIGATION,
+                3: STAGE_3_ORB_COLLECTION,
+                4: STAGE_4_FULL_TASK
+            }
+            ml_stage_config = stage_configs.get(reward_stage, STAGE_4_FULL_TASK)
+            reward_config = RewardCalculator.config_from_mlconfig(ml_stage_config)
 
         self.env_config = env_config
         self.reward_calculator = RewardCalculator(reward_config)

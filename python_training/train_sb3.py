@@ -109,12 +109,32 @@ class MetricsCallback(BaseCallback):
                         print(f"\n[CHECKPOINT] Saved: {checkpoint_path}.zip")
 
 
-def train(config_path: str):
+def train(config_path: str, resume_from: str = None, stage: int = None):
     """Main training loop with Stable-Baselines3"""
 
     # Load configuration
     config = load_config(config_path)
-    print("Configuration loaded:")
+
+    # Override stage if specified
+    if stage is not None:
+        print(f"\n{'='*60}")
+        print(f"SWITCHING TO STAGE {stage}")
+        print(f"{'='*60}")
+        from env.ml_config import (STAGE_1_DRIVING_CONTROL, STAGE_2_NAVIGATION,
+                                     STAGE_3_ORB_COLLECTION, STAGE_4_FULL_TASK)
+        stage_configs = {
+            1: STAGE_1_DRIVING_CONTROL,
+            2: STAGE_2_NAVIGATION,
+            3: STAGE_3_ORB_COLLECTION,
+            4: STAGE_4_FULL_TASK
+        }
+        if stage in stage_configs:
+            # Update environment to use the selected stage
+            print(f"Using {['DRIVING', 'NAVIGATION', 'ORB_COLLECTION', 'FULL_TASK'][stage-1]} configuration")
+        else:
+            print(f"Warning: Invalid stage {stage}, using default")
+
+    print("\nConfiguration loaded:")
     print(yaml.dump(config, default_flow_style=False))
 
     # Create directories
@@ -136,14 +156,21 @@ def train(config_path: str):
 
     # Create environment (new version doesn't need config params)
     print("\nCreating environment...")
-    env = LunaboticsEnv()
+    env = LunaboticsEnv(reward_stage=stage if stage is not None else 4)  # Default to stage 4
 
     print(f"Observation space: {env.observation_space}")
     print(f"Action space: {env.action_space}")
 
-    # Create PPO agent with Stable-Baselines3
-    print("\nCreating PPO agent...")
-    model = PPO(
+    # Create or load PPO agent
+    if resume_from:
+        print(f"\n{'='*60}")
+        print(f"RESUMING FROM CHECKPOINT: {resume_from}")
+        print(f"{'='*60}")
+        model = PPO.load(resume_from, env=env)
+        print("Model loaded successfully. Continuing training...")
+    else:
+        print("\nCreating new PPO agent...")
+        model = PPO(
         "MlpPolicy",
         env,
         learning_rate=config['training']['learning_rate'],
@@ -158,11 +185,11 @@ def train(config_path: str):
         max_grad_norm=0.5,
         verbose=1,
         tensorboard_log=str(tensorboard_dir),
-        policy_kwargs=dict(
-            net_arch=[dict(pi=config['training']['actor_fc_layers'],
-                          vf=config['training']['value_fc_layers'])]
+            policy_kwargs=dict(
+                net_arch=[dict(pi=config['training']['actor_fc_layers'],
+                              vf=config['training']['value_fc_layers'])]
+            )
         )
-    )
 
     # Create callback
     callback = MetricsCallback(metrics_server, config, checkpoint_dir)
@@ -215,9 +242,21 @@ def main():
         default='config/default_config.yaml',
         help='Path to configuration file'
     )
+    parser.add_argument(
+        '--resume',
+        type=str,
+        default=None,
+        help='Path to checkpoint to resume from (e.g., checkpoints/model_episode_70000)'
+    )
+    parser.add_argument(
+        '--stage',
+        type=int,
+        default=None,
+        help='Training stage (1-4): 1=Driving, 2=Navigation, 3=Orb Collection, 4=Full Task'
+    )
 
     args = parser.parse_args()
-    train(args.config)
+    train(args.config, resume_from=args.resume, stage=args.stage)
 
 
 if __name__ == '__main__':
