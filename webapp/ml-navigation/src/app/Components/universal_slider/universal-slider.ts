@@ -26,6 +26,7 @@ export class UniversalSliderComponent implements OnInit, OnDestroy {
   @Input() trackSize: number = 5;
   @Input() trackColor: string = '#e8eaed';
   @Input() pillBgOpacity: number = 0.08;
+  @Input() disabled: boolean = false;
 
   value = model<number>(0);
   private windowHeight = signal<number>(window.innerHeight);

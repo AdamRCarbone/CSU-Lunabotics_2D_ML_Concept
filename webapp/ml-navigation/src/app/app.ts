@@ -1,6 +1,8 @@
 // src/app/app.component.ts
 import { Component, HostListener, ViewChild, AfterViewInit, ChangeDetectorRef, NgZone, OnDestroy } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
+import { FormsModule } from '@angular/forms';
+import { CommonModule } from '@angular/common';
 import { EnvironmentComponent } from '../environment/environment';
 import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
@@ -10,12 +12,13 @@ import { DetectedObstacles } from './Components/detected-obstacles/detected-obst
 import { DetectedDiggableComponent } from './Components/detected-diggable/detected-diggable';
 import { Zone } from './enums/zone.enum';
 import { ResetTrigger } from './services/reset-trigger';
+import { InferenceService, ModelInfo } from './services/inference.service';
 import { Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent, FormsModule, CommonModule],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -41,11 +44,19 @@ export class App implements AfterViewInit, OnDestroy {
   ];
   private resetSubscription?: Subscription;
 
+  // AI Control properties
+  public controlMode: 'manual' | 'ai' = 'manual';
+  public modelPath: string = '';
+  public aiRunning: boolean = false;
+  public aiStatus: 'loading' | 'running' | 'error' | null = null;
+  private aiLoopInterval?: any;
+
   constructor(
     private windowSizeService: WindowSizeService,
     private cdr: ChangeDetectorRef,
     private ngZone: NgZone,
-    private resetTrigger: ResetTrigger
+    private resetTrigger: ResetTrigger,
+    private inferenceService: InferenceService
   ) {
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
@@ -141,6 +152,7 @@ export class App implements AfterViewInit, OnDestroy {
     if (this.resetSubscription) {
       this.resetSubscription.unsubscribe();
     }
+    this.stopAI();
   }
 
   hexToRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -231,5 +243,175 @@ export class App implements AfterViewInit, OnDestroy {
     this.digModeParams = [
       { name: 'Mode', value: this.digMode ? 'ON' : 'OFF' }
     ];
+  }
+
+  // AI Control Methods
+  onControlModeChange() {
+    if (this.controlMode === 'manual') {
+      this.stopAI();
+    }
+  }
+
+  onModelFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+
+      // Get the full path (Electron/desktop apps have access to file.path)
+      // For web browsers, we'll just get the file name
+      const fullPath = (file as any).path || file.name;
+
+      // Remove .zip extension if present
+      this.modelPath = fullPath.replace(/\.zip$/i, '');
+
+      console.log('Selected file:', file.name);
+      console.log('Full path:', fullPath);
+      console.log('Model path to send:', this.modelPath);
+    }
+  }
+
+  async loadAndStartAI() {
+    if (!this.modelPath || this.aiRunning) return;
+
+    try {
+      this.aiStatus = 'loading';
+      console.log('Loading model:', this.modelPath);
+
+      // Load the model on the inference server
+      const result = await this.inferenceService.loadModel(this.modelPath);
+      console.log('Model loaded:', result);
+
+      this.aiStatus = 'running';
+      this.aiRunning = true;
+
+      // Start the AI control loop
+      this.startAILoop();
+    } catch (error) {
+      console.error('Failed to load and start AI:', error);
+      this.aiStatus = 'error';
+      this.aiRunning = false;
+    }
+  }
+
+  stopAI() {
+    if (this.aiLoopInterval) {
+      clearInterval(this.aiLoopInterval);
+      this.aiLoopInterval = undefined;
+    }
+    this.aiRunning = false;
+    this.aiStatus = null;
+
+    // Reset manual controls
+    this.speedValue = 0;
+    this.rotationValue = 0;
+  }
+
+  private startAILoop() {
+    // Run AI predictions at ~20Hz (50ms interval)
+    this.aiLoopInterval = setInterval(async () => {
+      if (!this.aiRunning || !this.environment) return;
+
+      try {
+        // Get current observation from environment
+        const observation = this.getObservation();
+
+        // Get action from inference server
+        const action = await this.inferenceService.predict(observation);
+
+        // Apply action to environment
+        this.applyAction(action);
+      } catch (error) {
+        console.error('AI prediction error:', error);
+        this.stopAI();
+        this.aiStatus = 'error';
+      }
+    }, 50);
+  }
+
+  private getObservation(): number[] {
+    if (!this.environment?.physicsEngine) return new Array(28).fill(0);
+
+    const state = this.environment.physicsEngine.getRoverState();
+    if (!state) return new Array(28).fill(0);
+
+    const detected = this.environment.frustum;
+
+    // Rover position in meters
+    const roverXMeters = this.environment.pixelsToMeters(state.x);
+    const roverYMeters = this.environment.environment_height_meters - this.environment.pixelsToMeters(state.y);
+
+    // Helper function to ensure no NaN or Infinity
+    const sanitize = (value: number): number => {
+      if (!isFinite(value) || isNaN(value)) return 0;
+      return value;
+    };
+
+    // Build observation matching the Python environment (28 dimensions)
+    const observation: number[] = [
+      // Rover state (8 values)
+      sanitize(roverXMeters),
+      sanitize(roverYMeters),
+      sanitize(state.vx || 0),
+      sanitize(state.vy || 0),
+      sanitize(state.angle),
+      sanitize(state.angularVelocity || 0),
+      Number(this.currentZone) || 0,
+      this.digMode ? 1.0 : 0.0,
+    ];
+
+    // Helper function to calculate distance and angle to an object
+    const calculateDistanceAngle = (obj: { x_meters: number; y_meters: number }): { distance: number; angle: number } => {
+      const dx = obj.x_meters - roverXMeters;
+      const dy = obj.y_meters - roverYMeters;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+      return { distance: sanitize(distance), angle: sanitize(angle) };
+    };
+
+    // Detected obstacles (max 5, each with distance and angle)
+    const obstacles = detected?.detectedCollidableObjects || [];
+    for (let i = 0; i < 5; i++) {
+      if (i < obstacles.length) {
+        const { distance, angle } = calculateDistanceAngle(obstacles[i]);
+        observation.push(distance, angle);
+      } else {
+        observation.push(0, 0);
+      }
+    }
+
+    // Detected diggable orbs (max 5, each with distance and angle)
+    const diggables = detected?.detectedDiggableObjects || [];
+    for (let i = 0; i < 5; i++) {
+      if (i < diggables.length) {
+        const { distance, angle } = calculateDistanceAngle(diggables[i]);
+        observation.push(distance, angle);
+      } else {
+        observation.push(0, 0);
+      }
+    }
+
+    console.log('Observation:', observation);
+    return observation;
+  }
+
+  private applyAction(action: number[] | undefined) {
+    if (!action || action.length !== 3) {
+      console.error('Invalid action:', action);
+      return;
+    }
+
+    // action[0]: linear velocity (-1 to 1)
+    // action[1]: angular velocity (0 to 360 degrees target heading)
+    // action[2]: dig action (0 or 1)
+
+    // Clamp values to valid ranges
+    this.speedValue = Math.max(-1, Math.min(1, action[0] || 0));
+    this.rotationValue = Math.max(0, Math.min(360, action[1] || 0));
+
+    // Handle dig action
+    const shouldDig = (action[2] || 0) > 0.5;
+    if (shouldDig !== this.digMode) {
+      this.toggleDigMode();
+    }
   }
 }

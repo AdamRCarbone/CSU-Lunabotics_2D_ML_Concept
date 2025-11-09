@@ -1,61 +1,71 @@
 """
 Custom Gymnasium environment for Lunabotics rover simulation.
 Headless training environment with simplified 2D physics.
+Matches TypeScript ML training system with 33-dimensional observation space.
 """
 
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
 from typing import Dict, Tuple, Optional, List
-from enum import Enum
+import math
 
 from .physics import PhysicsEngine, RigidBody, Circle, Vec2
+from config.ml_config import MLConfig
+from rewards.reward_calculator import RewardCalculator, Zone
 
 
-class Zone(Enum):
-    """Environment zones"""
-    STARTING = 0
-    EXCAVATION = 1
-    OBSTACLE = 2
-    CONSTRUCTION = 3
-    TARGET_BERM = 4
-    NONE = 5
+class Orb:
+    """Diggable orb that can be picked up"""
+    def __init__(self, position: Vec2, radius: float):
+        self.position = position
+        self.radius = radius
+        self.is_picked_up = False
+        self.physics_body: Optional[Circle] = None
 
 
 class LunaboticsEnv(gym.Env):
     """
     Lunabotics rover environment for RL training.
+    Matches TypeScript training system.
 
-    Observation Space:
-        - Rover position (x, y)
-        - Rover velocity (vx, vy)
-        - Rover angle (radians)
-        - Rover angular velocity
-        - Current zone
-        - Holding orb (0 or 1)
-        - Detected obstacles (up to 5 closest, distance + angle)
-        - Detected orbs (up to 5 closest, distance + angle)
+    Observation Space (33 dimensions):
+        [0] rover_x (0-1 normalized)
+        [1] rover_y (0-1 normalized)
+        [2] rover_heading (0-1 normalized, 0-360° → 0-1)
+        [3] rover_speed (-1 to 1)
+        [4] is_holding_orbs (0 or 1)
+        [5] num_orbs_held (0-1 normalized, 0-15 → 0-1)
+        [6] in_excavation_zone (0 or 1)
+        [7] in_construction_zone (0 or 1)
+        [8] in_berm_zone (0 or 1)
+        [9] in_obstacle_zone (0 or 1)
+        [10] nearest_orb_distance (0-1 normalized)
+        [11] nearest_orb_angle (-1 to 1, relative to heading)
+        [12] nearest_orb_in_grab_zone (0 or 1)
+        [13-27] obstacles (5 × [distance, angle, radius], 0-1 normalized)
+        [28] construction_zone_distance (0-1 normalized)
+        [29] construction_zone_angle (-1 to 1, relative to heading)
 
     Action Space:
-        - Linear velocity multiplier [-1, 1]
-        - Angular velocity multiplier [-1, 1]
-        - Dig action (0 or 1)
-
-    Rewards:
-        - Configured via reward_config dict
-        - Progress toward goals
-        - Successful orb collection and deposit
-        - Penalties for collisions
+        [0] Linear velocity multiplier [-1, 1]
+        [1] Angular velocity multiplier [-1, 1]
+        [2] Dig action [0, 1]
     """
 
     metadata = {"render_modes": ["none"], "render_fps": 60}
 
-    def __init__(self, env_config: Dict, reward_config: Dict):
+    def __init__(self, env_config: Optional[Dict] = None, reward_config: Optional[Dict] = None):
         super().__init__()
 
-        # Configuration
+        # Use ML config
+        if env_config is None:
+            env_config = MLConfig.get_env_config()
+        if reward_config is None:
+            reward_config = RewardCalculator.get_default_config()
+
         self.env_config = env_config
-        self.reward_config = reward_config
+        self.reward_calculator = RewardCalculator(reward_config)
 
         # World dimensions
         self.world_width = env_config['world_width']
@@ -71,8 +81,11 @@ class LunaboticsEnv(gym.Env):
         # Detection
         self.frustum_depth = env_config['frustum_depth']
         self.frustum_far_width = env_config['frustum_far_width']
-        self.max_detected_obstacles = 5
-        self.max_detected_orbs = 5
+        self.max_detected_obstacles = MLConfig.MAX_DETECTED_OBSTACLES
+        self.grab_zone_distance = env_config['grab_zone_distance']
+
+        # Multi-orb support
+        self.max_orbs_held = env_config['max_orbs_held']
 
         # Physics engine
         self.physics = PhysicsEngine(self.world_width, self.world_height)
@@ -81,55 +94,19 @@ class LunaboticsEnv(gym.Env):
         self.rover: Optional[RigidBody] = None
         self.rocks: List[Circle] = []
         self.craters: List[Circle] = []
-        self.orbs: List[Circle] = []
-        self.holding_orb = False
+        self.orbs: List[Orb] = []  # Changed to custom Orb class
+        self.orbs_held: List[Orb] = []  # Orbs currently held
         self.current_zone = Zone.STARTING
         self.steps = 0
 
         # Episode tracking
         self.total_reward = 0.0
-        self.orbs_collected = 0
         self.orbs_deposited = 0
+        self.previous_state: Dict = {}
 
-        # Define observation space
-        # [rover_x, rover_y, rover_vx, rover_vy, rover_angle, rover_angular_vel,
-        #  zone, holding_orb,
-        #  obstacle_1_dist, obstacle_1_angle, ..., obstacle_5_dist, obstacle_5_angle,
-        #  orb_1_dist, orb_1_angle, ..., orb_5_dist, orb_5_angle]
-        obs_dim = 8 + (self.max_detected_obstacles * 2) + (self.max_detected_orbs * 2)
-
-        # Define reasonable bounds for TF-Agents compatibility
-        # Build low bounds
-        obs_low_list = [
-            0.0,  # rover_x (min)
-            0.0,  # rover_y (min)
-            -10.0,  # rover_vx (min velocity)
-            -10.0,  # rover_vy (min velocity)
-            -np.pi,  # rover_angle (min)
-            -10.0,  # rover_angular_vel (min)
-            0.0,  # zone (min)
-            0.0,  # holding_orb (min)
-        ]
-        # Add detection bounds (distance, angle pairs)
-        for _ in range(self.max_detected_obstacles + self.max_detected_orbs):
-            obs_low_list.extend([0.0, -np.pi])  # dist min, angle min
-        obs_low = np.array(obs_low_list, dtype=np.float32)
-
-        # Build high bounds
-        obs_high_list = [
-            self.world_width,  # rover_x (max)
-            self.world_height,  # rover_y (max)
-            10.0,  # rover_vx (max velocity)
-            10.0,  # rover_vy (max velocity)
-            np.pi,  # rover_angle (max)
-            10.0,  # rover_angular_vel (max)
-            6.0,  # zone (max - 6 zones)
-            1.0,  # holding_orb (max)
-        ]
-        # Add detection bounds (distance, angle pairs)
-        for _ in range(self.max_detected_obstacles + self.max_detected_orbs):
-            obs_high_list.extend([10.0, np.pi])  # dist max, angle max
-        obs_high = np.array(obs_high_list, dtype=np.float32)
+        # Define observation space (33 dimensions, all normalized to [-1, 1] or [0, 1])
+        obs_low = np.array([-1.0] * MLConfig.OBS_DIM, dtype=np.float32)
+        obs_high = np.array([1.0] * MLConfig.OBS_DIM, dtype=np.float32)
 
         self.observation_space = spaces.Box(
             low=obs_low,
@@ -146,24 +123,17 @@ class LunaboticsEnv(gym.Env):
         )
 
         # Zone boundaries (x_start, x_end, y_start, y_end)
-        self._define_zones()
+        self.zone_starting = MLConfig.ZONE_STARTING
+        self.zone_excavation = MLConfig.ZONE_EXCAVATION
+        self.zone_obstacle = MLConfig.ZONE_OBSTACLE
+        self.zone_construction = MLConfig.ZONE_CONSTRUCTION
+        self.zone_target_berm = MLConfig.ZONE_TARGET_BERM
 
-    def _define_zones(self):
-        """Define zone boundaries based on Lunabotics competition layout"""
-        # Starting zone: bottom-left, 2m x 2m
-        self.zone_starting = (0, 2.0, 3.0, 5.0)
-
-        # Excavation zone: 2.5m wide
-        self.zone_excavation = (0, 2.5, 0, 3.0)
-
-        # Obstacle zone: 4.38m wide
-        self.zone_obstacle = (2.5, 6.88, 0, 5.0)
-
-        # Construction zone: 3m x 1.5m
-        self.zone_construction = (6.88, 9.88, 0, 1.5)
-
-        # Target berm: 1.7m x 0.8m (within construction zone)
-        self.zone_target_berm = (6.88, 8.58, 0.35, 1.15)
+        # Construction zone center for observations
+        self.construction_center = Vec2(
+            (self.zone_construction[0] + self.zone_construction[1]) / 2,
+            (self.zone_construction[2] + self.zone_construction[3]) / 2
+        )
 
     def _get_zone(self, position: Vec2) -> Zone:
         """Determine which zone a position is in"""
@@ -223,21 +193,22 @@ class LunaboticsEnv(gym.Env):
             self.craters.append(crater)
             self.physics.add_circle(crater)
 
-        # Spawn orbs
+        # Spawn orbs with multi-orb support
         self.orbs = []
         for _ in range(self.env_config['num_orbs']):
             pos = self._random_position_in_zone(*self.zone_excavation)
-            orb = Circle(position=pos, radius=0.075, is_static=False)
+            orb = Orb(position=pos, radius=self.env_config['orb_radius'])
+            orb.physics_body = Circle(position=pos, radius=orb.radius, is_static=False)
             self.orbs.append(orb)
-            self.physics.add_circle(orb)
+            self.physics.add_circle(orb.physics_body)
 
         # Reset state
-        self.holding_orb = False
+        self.orbs_held = []
         self.current_zone = Zone.STARTING
         self.steps = 0
         self.total_reward = 0.0
-        self.orbs_collected = 0
         self.orbs_deposited = 0
+        self.previous_state = self._get_current_state()
 
         return self._get_observation(), {}
 
@@ -257,7 +228,7 @@ class LunaboticsEnv(gym.Env):
 
         # Convert to force (simplified)
         direction = Vec2(np.cos(self.rover.angle), np.sin(self.rover.angle))
-        force = direction * target_linear_velocity * 10.0  # force magnitude
+        force = direction * target_linear_velocity * 10.0
         self.rover.apply_force(force, self.dt)
         self.rover.apply_torque(target_angular_velocity * 5.0, self.dt)
 
@@ -265,34 +236,50 @@ class LunaboticsEnv(gym.Env):
         self.physics.step(self.dt)
 
         # Update zone
-        prev_zone = self.current_zone
         self.current_zone = self._get_zone(self.rover.position)
 
-        # Handle dig action
-        if dig_action > 0.5 and not self.holding_orb:
-            # Try to grab nearby orb
-            for orb in self.orbs:
-                dist = (self.rover.position - orb.position).magnitude()
-                if dist < 0.5:  # grab range
-                    self.holding_orb = True
-                    self.orbs.remove(orb)
-                    self.physics.circles.remove(orb)
-                    self.orbs_collected += 1
-                    break
+        # Update positions of held orbs
+        self._update_held_orbs()
 
-        # Check for orb deposit
-        if self.holding_orb and self.current_zone == Zone.TARGET_BERM:
-            self.holding_orb = False
-            self.orbs_deposited += 1
+        # Handle dig action
+        if dig_action > 0.5:
+            # Try to grab or release
+            if len(self.orbs_held) == 0:
+                # Try to grab nearby orbs
+                self._grab_orbs()
+            else:
+                # Release orbs
+                self._release_orbs()
+
+        # Check for orb deposit in target berm
+        if len(self.orbs_held) > 0 and self.current_zone == Zone.TARGET_BERM:
+            # Deposit all held orbs
+            self.orbs_deposited += len(self.orbs_held)
+            # Remove deposited orbs from simulation
+            for orb in self.orbs_held:
+                if orb.physics_body:
+                    self.physics.circles.remove(orb.physics_body)
+                self.orbs.remove(orb)
+            self.orbs_held = []
+
+        # Get current state
+        current_state = self._get_current_state()
 
         # Calculate reward
-        reward = self._calculate_reward(action, prev_zone)
+        reward = self.reward_calculator.calculate_reward(
+            current_state,
+            self.previous_state,
+            {'speed': linear_mult, 'turn': angular_mult, 'dig': dig_action}
+        )
         self.total_reward += reward
+
+        # Update previous state
+        self.previous_state = current_state
 
         # Check termination
         self.steps += 1
         terminated = self.orbs_deposited >= self.env_config['num_orbs']  # Mission complete
-        truncated = self.steps >= 1000  # Max steps
+        truncated = self.steps >= MLConfig.MAX_EPISODE_STEPS  # Max steps
 
         # Observation
         obs = self._get_observation()
@@ -301,140 +288,239 @@ class LunaboticsEnv(gym.Env):
         info = {
             'steps': self.steps,
             'total_reward': self.total_reward,
-            'orbs_collected': self.orbs_collected,
+            'orbs_held': len(self.orbs_held),
             'orbs_deposited': self.orbs_deposited,
             'current_zone': self.current_zone.name,
         }
 
         return obs, reward, terminated, truncated, info
 
-    def _calculate_reward(self, action: np.ndarray, prev_zone: Zone) -> float:
-        """Calculate reward for current step"""
-        reward = 0.0
-        cfg = self.reward_config
+    def _grab_orbs(self):
+        """Grab all orbs within grab zone"""
+        if len(self.orbs_held) >= self.max_orbs_held:
+            return
 
-        # Time penalty
-        reward += cfg['time_step']
+        for orb in self.orbs:
+            if orb.is_picked_up:
+                continue
 
-        # Zone progression rewards
-        if self.current_zone == Zone.EXCAVATION and prev_zone == Zone.STARTING:
-            reward += cfg['reach_excavation_zone']
+            # Check if orb is in grab zone
+            dist = (self.rover.position - orb.position).magnitude()
+            if dist < self.grab_zone_distance:
+                # Calculate relative angle to check if orb is in front
+                relative_pos = orb.position - self.rover.position
+                angle_to_orb = math.atan2(relative_pos.y, relative_pos.x)
+                relative_angle = angle_to_orb - self.rover.angle
 
-        if self.current_zone == Zone.CONSTRUCTION and self.holding_orb:
-            reward += cfg['reach_construction_zone_with_orb']
+                # Normalize angle to [-pi, pi]
+                relative_angle = math.atan2(math.sin(relative_angle), math.cos(relative_angle))
 
-        # Orb collection
-        if self.holding_orb and not hasattr(self, '_was_holding_orb'):
-            reward += cfg['collect_orb']
-        self._was_holding_orb = self.holding_orb
+                # Only grab if orb is in front (within 90 degrees)
+                if abs(relative_angle) < math.pi / 2:
+                    orb.is_picked_up = True
+                    self.orbs_held.append(orb)
 
-        # Orb deposit (checked in step())
-        if hasattr(self, '_prev_deposited'):
-            if self.orbs_deposited > self._prev_deposited:
-                reward += cfg['deposit_orb']
-        self._prev_deposited = self.orbs_deposited
+                    if len(self.orbs_held) >= self.max_orbs_held:
+                        break
 
-        # Collision penalties
+    def _release_orbs(self):
+        """Release all held orbs"""
+        for orb in self.orbs_held:
+            orb.is_picked_up = False
+        self.orbs_held = []
+
+    def _update_held_orbs(self):
+        """Update positions of held orbs to follow rover"""
+        for orb in self.orbs_held:
+            # Keep orbs at rover position (Vec2 doesn't have copy, create new Vec2)
+            orb.position = Vec2(self.rover.position.x, self.rover.position.y)
+            if orb.physics_body:
+                orb.physics_body.position = Vec2(self.rover.position.x, self.rover.position.y)
+
+    def _get_current_state(self) -> Dict:
+        """Get current state for reward calculation"""
+        # Check collisions
         collisions = self.physics.get_circle_collisions(self.rover)
-        if collisions:
-            for obj in collisions:
-                if obj in self.rocks or obj in self.craters:
-                    reward += cfg['collision_obstacle']
+        collided_with_obstacle = any(obj in self.rocks or obj in self.craters for obj in collisions)
+        collided_with_wall = (
+            self.rover.position.x < 0 or self.rover.position.x > self.world_width or
+            self.rover.position.y < 0 or self.rover.position.y > self.world_height
+        )
 
-        # Wall collision check (simple bounds check)
-        if (self.rover.position.x < 0 or self.rover.position.x > self.world_width or
-            self.rover.position.y < 0 or self.rover.position.y > self.world_height):
-            reward += cfg['collision_wall']
-
-        # Shaping reward: progress toward excavation zone (when not holding orb)
-        if not self.holding_orb and self.current_zone != Zone.EXCAVATION:
-            # Distance to excavation zone center
-            excavation_center = Vec2(1.25, 1.5)
-            dist_to_excavation = (self.rover.position - excavation_center).magnitude()
-            # Small reward for getting closer
-            if hasattr(self, '_prev_dist_to_excavation'):
-                delta_dist = self._prev_dist_to_excavation - dist_to_excavation
-                reward += delta_dist * cfg['progress_toward_excavation']
-            self._prev_dist_to_excavation = dist_to_excavation
-
-        # Shaping reward: progress toward construction zone (when holding orb)
-        if self.holding_orb:
-            construction_center = Vec2(8.38, 0.75)
-            dist_to_construction = (self.rover.position - construction_center).magnitude()
-            if hasattr(self, '_prev_dist_to_construction'):
-                delta_dist = self._prev_dist_to_construction - dist_to_construction
-                reward += delta_dist * cfg['progress_toward_construction']
-            self._prev_dist_to_construction = dist_to_construction
-
-        return reward
+        return {
+            'rover_x': self.rover.position.x,
+            'rover_y': self.rover.position.y,
+            'current_zone': self.current_zone,
+            'num_orbs_held': len(self.orbs_held),
+            'orbs_deposited': self.orbs_deposited,
+            'collided_with_obstacle': collided_with_obstacle,
+            'collided_with_wall': collided_with_wall,
+        }
 
     def _get_observation(self) -> np.ndarray:
-        """Get current observation"""
+        """
+        Get current observation (33 dimensions).
+        All values normalized to appropriate ranges.
+        """
         obs = []
 
-        # Rover state
-        obs.extend([
-            self.rover.position.x,
-            self.rover.position.y,
-            self.rover.velocity.x,
-            self.rover.velocity.y,
-            self.rover.angle,
-            self.rover.angular_velocity,
-            float(self.current_zone.value),
-            float(self.holding_orb),
-        ])
+        # [0] Rover X position (0-1 normalized)
+        obs.append(self.rover.position.x / self.world_width)
 
-        # Detected obstacles (closest 5 in frustum)
-        detected_obstacles = self._detect_objects_in_frustum(self.rocks + self.craters)
-        for i in range(self.max_detected_obstacles):
-            if i < len(detected_obstacles):
-                dist, angle = detected_obstacles[i]
-                obs.extend([dist, angle])
-            else:
-                obs.extend([0.0, 0.0])  # No detection
+        # [1] Rover Y position (0-1 normalized)
+        obs.append(self.rover.position.y / self.world_height)
 
-        # Detected orbs (closest 5 in frustum)
-        detected_orbs = self._detect_objects_in_frustum(self.orbs)
-        for i in range(self.max_detected_orbs):
-            if i < len(detected_orbs):
-                dist, angle = detected_orbs[i]
-                obs.extend([dist, angle])
-            else:
-                obs.extend([0.0, 0.0])  # No detection
+        # [2] Rover heading (0-1 normalized, 0-360° → 0-1)
+        heading_deg = math.degrees(self.rover.angle) % 360
+        obs.append(heading_deg / 360.0)
+
+        # [3] Rover speed (-1 to 1)
+        speed = self.rover.velocity.magnitude()
+        normalized_speed = np.clip(speed / self.max_speed, -1.0, 1.0)
+        obs.append(normalized_speed)
+
+        # [4] Is holding orbs (0 or 1)
+        obs.append(1.0 if len(self.orbs_held) > 0 else 0.0)
+
+        # [5] Number of orbs held (0-1 normalized)
+        obs.append(len(self.orbs_held) / self.max_orbs_held)
+
+        # [6-9] Zone flags
+        obs.append(1.0 if self.current_zone == Zone.EXCAVATION else 0.0)
+        obs.append(1.0 if self.current_zone == Zone.CONSTRUCTION else 0.0)
+        obs.append(1.0 if self.current_zone == Zone.TARGET_BERM else 0.0)
+        obs.append(1.0 if self.current_zone == Zone.OBSTACLE else 0.0)
+
+        # [10-12] Nearest orb info
+        nearest_orb_dist, nearest_orb_angle, nearest_orb_in_grab = self._get_nearest_orb_info()
+        obs.append(nearest_orb_dist)
+        obs.append(nearest_orb_angle)
+        obs.append(nearest_orb_in_grab)
+
+        # [13-27] Obstacles (5 × [distance, angle, radius])
+        obstacle_info = self._get_obstacle_info()
+        obs.extend(obstacle_info)
+
+        # [28-29] Construction zone direction
+        construction_dist, construction_angle = self._get_construction_zone_info()
+        obs.append(construction_dist)
+        obs.append(construction_angle)
 
         return np.array(obs, dtype=np.float32)
 
-    def _detect_objects_in_frustum(self, objects: List[Circle]) -> List[Tuple[float, float]]:
-        """Detect objects within frustum and return (distance, relative_angle) pairs"""
-        detections = []
+    def _get_nearest_orb_info(self) -> Tuple[float, float, float]:
+        """
+        Get info about nearest orb.
+        Returns: (distance 0-1, angle -1 to 1, in_grab_zone 0 or 1)
+        """
+        available_orbs = [orb for orb in self.orbs if not orb.is_picked_up]
 
-        for obj in objects:
-            # Calculate relative position
-            relative_pos = obj.position - self.rover.position
-            distance = relative_pos.magnitude()
+        if not available_orbs:
+            return 0.0, 0.0, 0.0
 
-            # Check if within frustum depth
-            if distance > self.frustum_depth:
-                continue
+        # Find nearest orb
+        nearest_orb = None
+        min_dist = float('inf')
 
-            # Calculate relative angle
-            angle_to_obj = np.arctan2(relative_pos.y, relative_pos.x)
-            relative_angle = angle_to_obj - self.rover.angle
+        for orb in available_orbs:
+            dist = (self.rover.position - orb.position).magnitude()
+            if dist < min_dist:
+                min_dist = dist
+                nearest_orb = orb
 
-            # Normalize angle to [-pi, pi]
-            relative_angle = np.arctan2(np.sin(relative_angle), np.cos(relative_angle))
+        if nearest_orb is None:
+            return 0.0, 0.0, 0.0
 
-            # Calculate frustum width at this distance
-            frustum_width_at_dist = (distance / self.frustum_depth) * self.frustum_far_width
+        # Calculate relative angle
+        relative_pos = nearest_orb.position - self.rover.position
+        angle_to_orb = math.atan2(relative_pos.y, relative_pos.x)
+        relative_angle = angle_to_orb - self.rover.angle
 
-            # Check if within frustum cone (simplified)
-            lateral_offset = distance * np.tan(relative_angle)
-            if abs(lateral_offset) <= frustum_width_at_dist / 2:
-                detections.append((distance, relative_angle))
+        # Normalize angle to [-pi, pi]
+        relative_angle = math.atan2(math.sin(relative_angle), math.cos(relative_angle))
 
-        # Sort by distance and return closest ones
-        detections.sort(key=lambda x: x[0])
-        return detections
+        # Normalize distance (0-1, with max distance = diagonal of world)
+        max_dist = math.sqrt(self.world_width ** 2 + self.world_height ** 2)
+        normalized_dist = min(min_dist / max_dist, 1.0)
+
+        # Normalize angle to [-1, 1]
+        normalized_angle = relative_angle / math.pi
+
+        # Check if in grab zone
+        in_grab_zone = 1.0 if (min_dist < self.grab_zone_distance and abs(relative_angle) < math.pi / 2) else 0.0
+
+        return normalized_dist, normalized_angle, in_grab_zone
+
+    def _get_obstacle_info(self) -> List[float]:
+        """
+        Get info about nearest obstacles.
+        Returns 15 values: 5 obstacles × (distance, angle, radius)
+        All normalized to 0-1 or -1 to 1
+        """
+        obstacles = self.rocks + self.craters
+        obstacle_data = []
+
+        # Calculate distance and angle for each obstacle
+        for obstacle in obstacles:
+            dist = (self.rover.position - obstacle.position).magnitude()
+            relative_pos = obstacle.position - self.rover.position
+            angle_to_obstacle = math.atan2(relative_pos.y, relative_pos.x)
+            relative_angle = angle_to_obstacle - self.rover.angle
+            relative_angle = math.atan2(math.sin(relative_angle), math.cos(relative_angle))
+
+            obstacle_data.append({
+                'distance': dist,
+                'angle': relative_angle,
+                'radius': obstacle.radius
+            })
+
+        # Sort by distance
+        obstacle_data.sort(key=lambda x: x['distance'])
+
+        # Take nearest 5
+        result = []
+        max_dist = math.sqrt(self.world_width ** 2 + self.world_height ** 2)
+        max_radius = 0.5  # Reasonable max radius for normalization
+
+        for i in range(self.max_detected_obstacles):
+            if i < len(obstacle_data):
+                obs_data = obstacle_data[i]
+                # Normalize distance (0-1)
+                normalized_dist = min(obs_data['distance'] / max_dist, 1.0)
+                # Normalize angle (-1 to 1)
+                normalized_angle = obs_data['angle'] / math.pi
+                # Normalize radius (0-1)
+                normalized_radius = min(obs_data['radius'] / max_radius, 1.0)
+                result.extend([normalized_dist, normalized_angle, normalized_radius])
+            else:
+                result.extend([0.0, 0.0, 0.0])
+
+        return result
+
+    def _get_construction_zone_info(self) -> Tuple[float, float]:
+        """
+        Get direction to construction zone.
+        Returns: (distance 0-1, angle -1 to 1)
+        """
+        # Calculate distance to construction center
+        dist = (self.rover.position - self.construction_center).magnitude()
+
+        # Calculate relative angle
+        relative_pos = self.construction_center - self.rover.position
+        angle_to_construction = math.atan2(relative_pos.y, relative_pos.x)
+        relative_angle = angle_to_construction - self.rover.angle
+
+        # Normalize angle to [-pi, pi]
+        relative_angle = math.atan2(math.sin(relative_angle), math.cos(relative_angle))
+
+        # Normalize distance (0-1)
+        max_dist = math.sqrt(self.world_width ** 2 + self.world_height ** 2)
+        normalized_dist = min(dist / max_dist, 1.0)
+
+        # Normalize angle (-1 to 1)
+        normalized_angle = relative_angle / math.pi
+
+        return normalized_dist, normalized_angle
 
     def render(self):
         """Render (not implemented for headless training)"""

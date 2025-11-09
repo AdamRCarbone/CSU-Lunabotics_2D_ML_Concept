@@ -134,9 +134,9 @@ def train(config_path: str):
     metrics_server.update_config(config)
     metrics_server.set_training_status(True)
 
-    # Create environment
+    # Create environment (new version doesn't need config params)
     print("\nCreating environment...")
-    env = LunaboticsEnv(config['environment'], config['rewards'])
+    env = LunaboticsEnv()
 
     print(f"Observation space: {env.observation_space}")
     print(f"Action space: {env.action_space}")
