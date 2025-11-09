@@ -1,0 +1,20 @@
+# Python ML Training Requirements
+
+# Core RL library
+stable-baselines3[extra]>=2.0.0
+
+# WebSocket server
+websockets>=11.0
+
+# Gymnasium (OpenAI Gym replacement)
+gymnasium>=0.28.0
+
+# Numpy
+numpy>=1.24.0
+
+# Visualization and logging
+tensorboard>=2.13.0
+matplotlib>=3.7.0
+
+# Utilities
+tqdm>=4.65.0

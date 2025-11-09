@@ -1,0 +1,31 @@
+============================================================
+Lunar Rover PPO Parallel Training
+============================================================
+
+[Setup] Configuration:
+  Parallel environments: 3
+  Training steps: 1,000,000
+  Max episode steps: 1000
+  Timescale: 1.0x
+
+[Setup] Searching for latest checkpoint...
+[Setup] Found checkpoint: lunar_rover_ppo_2680000_steps.zip (2,680,000 steps)
+[Setup] Will train for 1,000,000 additional steps
+
+[Setup] Creating 3 WebSocket servers...
+[Setup] Starting server 1 on ws://localhost:8765
+[Setup] Starting server 2 on ws://localhost:8766
+[Setup] Starting server 3 on ws://localhost:8767
+[Bridge] Starting WebSocket server on localhost:8766
+[Bridge] Starting WebSocket server on localhost:8765
+[Bridge] Starting WebSocket server on localhost:8767
+[Bridge] Server running on ws://localhost:8767
+[Bridge] Server running on ws://localhost:8765
+[Bridge] Server running on ws://localhost:8766
+
+[Setup] Please open 3 browser tabs manually:
+  Browser 1: http://localhost:4200?wsPort=8765&maxSteps=1000
+  Browser 2: http://localhost:4200?wsPort=8766&maxSteps=1000
+  Browser 3: http://localhost:4200?wsPort=8767&maxSteps=1000
+
+[Setup] Creating 3 parallel environments...

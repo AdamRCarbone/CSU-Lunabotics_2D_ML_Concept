@@ -1,0 +1,81 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 0.75rem;
+  background: rgba(142, 76, 255, 0.04);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(142, 76, 255, 0.1);
+}
+
+.header {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #6750a4;
+  letter-spacing: 0.02em;
+  margin-bottom: 0.25rem;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.table-header {
+  display: grid;
+  grid-template-columns: 1.2fr 0.75fr 0.75fr 0.75fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(142, 76, 255, 0.12);
+  border-radius: 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #6750a4;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.table-header .cell {
+  justify-content: center;
+}
+
+.table-row {
+  display: grid;
+  grid-template-columns: 1.2fr 0.75fr 0.75fr 0.75fr;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.table-row.empty-row {
+  opacity: 0.4;
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.name-cell {
+  font-weight: 600;
+  color: #1c1b1f;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 0.75rem;
+}
+
+.value-cell {
+  font-weight: 400;
+  color: #1c1b1f;
+  font-variant-numeric: tabular-nums;
+}
+
+.unit {
+  margin-left: 0.125rem;
+}

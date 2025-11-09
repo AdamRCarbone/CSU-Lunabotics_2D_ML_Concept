@@ -1,0 +1,185 @@
+<style>
+
+  :host {
+    font-family: system-ui, -apple-system, sans-serif;
+    box-sizing: border-box;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  main {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 1rem;
+    gap: 1.5rem;
+    background: #f5f5f7;
+    min-height: 100vh;
+  }
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    gap: 1.5rem;
+    max-width: 1600px;
+  }
+
+  .top-section {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    width: 100%;
+    gap: 2rem;
+  }
+
+  /* Consistent card styling */
+  .card {
+    background: #ffffff;
+    border-radius: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  .card-header {
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 1rem;
+    font-weight: 500;
+    color: #1c1b1f;
+  }
+
+  .card-content {
+    padding: 1.25rem;
+  }
+
+  /* Layout sections */
+  .left-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .right-section {
+    display: flex;
+    flex-direction: row;
+    gap: 1.5rem;
+  }
+
+  router-outlet {
+    display: none;
+  }
+
+  /* Bottom section for ML panels */
+  .bottom-section {
+    display: flex;
+    gap: 1.5rem;
+    width: 100%;
+    align-items: flex-start;
+  }
+
+  .rewards-panel-container {
+    flex: 0 0 400px;
+    max-height: 600px;
+    display: flex;
+  }
+
+  .ml-panel-container {
+    flex: 1;
+    min-width: 600px;
+  }
+</style>
+
+<main class="main">
+  <div class="content">
+    <!-- Top Section: Zone, Environment, Detection & Controls -->
+    <div class="top-section">
+      <!-- Left Section: Zone & Parameters -->
+      <div class="left-section">
+        <div class="card" style="min-width: 220px;">
+          <div class="card-header">Zone Legend</div>
+          <div class="card-content">
+            <app-zone-legend [currentZone]="currentZone"></app-zone-legend>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-header">Rover Status</div>
+          <div class="card-content" style="display: flex; flex-direction: column; gap: 1rem;">
+            <app-parameter-display
+              [header]="'Position'"
+              [parameters]="positionParams"
+              [color]="'#6eb9ff'">
+            </app-parameter-display>
+            <app-parameter-display
+              [header]="'Digging'"
+              [parameters]="digModeParams"
+              [color]="'#ff9800'">
+            </app-parameter-display>
+          </div>
+        </div>
+      </div>
+
+      <!-- Center: Environment -->
+      <app-environment
+        [roverSpeedMultiplier]="speedValue"
+        [roverTargetHeading]="rotationValue">
+      </app-environment>
+
+      <!-- Right Section: Detection & Controls -->
+      <div class="right-section">
+        <div class="card" [style.height.px]="environment?.environment_height_px" style="width: 320px; display: flex; flex-direction: column;">
+          <div class="card-header">Detection</div>
+          <div class="card-content" style="display: flex; flex-direction: column; flex: 1; overflow-y: auto;">
+            <app-detected-obstacles [obstacles]="detectedObstacles"></app-detected-obstacles>
+            <app-detected-diggable [diggables]="detectedDiggables"></app-detected-diggable>
+          </div>
+        </div>
+
+        <div class="card" [style.height.px]="environment?.environment_height_px" style="display: flex; flex-direction: column;">
+          <div class="card-header">Rover Controls</div>
+          <div class="card-content" style="flex: 1; display: flex; align-items: center;">
+            <div style="display: flex; gap: 1.5rem; justify-content: center;">
+              <app-universal-slider
+                [(value)]="speedValue"
+                [min]="-1"
+                [max]="1"
+                [step]="0.01"
+                [environmentHeightPx]="environment?.environment_height_px"
+                orientation="vertical"
+                label="Speed"
+                [showValue]="true"
+                color="#008526">
+              </app-universal-slider>
+              <app-universal-slider
+                [(value)]="rotationValue"
+                [min]="0"
+                [max]="360"
+                [step]=".1"
+                [environmentHeightPx]="environment?.environment_height_px"
+                orientation="vertical"
+                label="Heading"
+                [showValue]="true"
+                color="#7DDA58">
+              </app-universal-slider>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bottom Section: Rewards Panel (Left) & ML Training Panel (Right) -->
+    <div class="bottom-section">
+      <div class="rewards-panel-container">
+        <app-ml-rewards-panel></app-ml-rewards-panel>
+      </div>
+      <div class="ml-panel-container">
+        <app-ml-training-panel></app-ml-training-panel>
+      </div>
+    </div>
+  </div>
+</main>

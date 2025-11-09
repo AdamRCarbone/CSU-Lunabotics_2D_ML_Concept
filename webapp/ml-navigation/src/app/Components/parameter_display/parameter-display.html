@@ -1,0 +1,23 @@
+<div class="parameter-container">
+    <div class="title-pill" [style.color]="color" [style.background]="pillBackground">
+        {{ header }}
+    </div>
+
+    <div class="parameters">
+        @for (param of parameters; track param.name) {
+            @if (isSeparator(param)) {
+                <div class="separator"></div>
+            } @else if (isSubheading(param)) {
+                <div class="subheading-pill" [style.color]="color" [style.background]="itemPillBackground">
+                    <span class="subheading-name">{{ param.name }}</span>
+                    <span class="subheading-value">{{ param.value }}</span>
+                </div>
+            } @else {
+                <div class="parameter-row">
+                    <span class="param-name">{{ param.name }}:</span>
+                    <span class="param-value">{{ param.value }}</span>
+                </div>
+            }
+        }
+    </div>
+</div>

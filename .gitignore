@@ -1,0 +1,29 @@
+# Python ML Training - Models and Logs
+python-training/models/**/*.zip
+python-training/logs/
+
+# Exception: Allow models in Saved folder to be tracked
+!python-training/models/Saved/
+!python-training/models/Saved/**/*.zip
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

@@ -1,0 +1,21 @@
+<div class="container">
+  <div class="header">Detected Diggables</div>
+
+  <div class="table">
+    <!-- Header Row -->
+    <div class="table-header">
+      <div class="cell">#</div>
+      <div class="cell">x</div>
+      <div class="cell">y</div>
+    </div>
+
+    <!-- Data Rows -->
+    @for (diggable of detectedDiggables; track $index) {
+      <div class="table-row" [class.empty-row]="diggable.name === '—'">
+        <div class="cell name-cell">{{ diggable.name }}</div>
+        <div class="cell value-cell">{{ diggable.x }}<span class="unit">{{ diggable.x !== '—' ? 'm' : '' }}</span></div>
+        <div class="cell value-cell">{{ diggable.y }}<span class="unit">{{ diggable.y !== '—' ? 'm' : '' }}</span></div>
+      </div>
+    }
+  </div>
+</div>

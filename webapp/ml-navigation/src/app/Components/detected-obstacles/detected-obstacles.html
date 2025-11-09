@@ -1,0 +1,23 @@
+<div class="container">
+  <div class="header">Detected Obstacles</div>
+
+  <div class="table">
+    <!-- Header Row -->
+    <div class="table-header">
+      <div class="cell">Object</div>
+      <div class="cell">x</div>
+      <div class="cell">y</div>
+      <div class="cell">r</div>
+    </div>
+
+    <!-- Data Rows -->
+    @for (obstacle of detectedObstacles; track $index) {
+      <div class="table-row" [class.empty-row]="obstacle.name === '—'">
+        <div class="cell name-cell">{{ obstacle.name }}</div>
+        <div class="cell value-cell">{{ obstacle.x }}<span class="unit">{{ obstacle.x !== '—' ? 'm' : '' }}</span></div>
+        <div class="cell value-cell">{{ obstacle.y }}<span class="unit">{{ obstacle.y !== '—' ? 'm' : '' }}</span></div>
+        <div class="cell value-cell">{{ obstacle.r }}<span class="unit">{{ obstacle.r !== '—' ? 'm' : '' }}</span></div>
+      </div>
+    }
+  </div>
+</div>

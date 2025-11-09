@@ -1,0 +1,62 @@
+<div class="rewards-panel">
+  <div class="panel-header">
+    <h3>⚙️ Reward Configuration</h3>
+    <div class="header-actions">
+      <button class="btn btn-link" (click)="resetAll()">Reset All</button>
+      <button class="btn btn-link" (click)="exportConfig()">Export</button>
+      <label class="btn btn-link">
+        Import
+        <input type="file" accept=".json" (change)="importConfig($event)" style="display: none;">
+      </label>
+    </div>
+  </div>
+
+  <!-- Training Preset Selector -->
+  <div class="preset-section">
+    <div class="preset-selector">
+      <label for="preset-dropdown">Training Stage:</label>
+      <select id="preset-dropdown" [(ngModel)]="selectedPreset" (change)="onPresetChange($event)" class="preset-dropdown">
+        <option *ngFor="let preset of presets" [value]="preset.id">{{ preset.name }}</option>
+        <option value="custom">Custom Configuration</option>
+      </select>
+    </div>
+    <p class="preset-description">{{ getPresetDescription() }}</p>
+  </div>
+
+  <div class="panel-content">
+    <!-- Category Sections -->
+    <div *ngFor="let category of categories" class="category-section">
+      <div class="category-header" (click)="toggleCategory(category.id)">
+        <span class="toggle-icon">{{ isCategoryExpanded(category.id) ? '▼' : '▶' }}</span>
+        <div class="category-info">
+          <h4>{{ category.label }}</h4>
+          <p class="category-description">{{ category.description }}</p>
+        </div>
+      </div>
+
+      <div class="category-content" *ngIf="isCategoryExpanded(category.id)">
+        <div *ngFor="let reward of getRewardsForCategory(category.id)" class="reward-item">
+          <div class="reward-row">
+            <div class="reward-info">
+              <label class="reward-label">{{ reward.label }}</label>
+              <p class="reward-description">{{ reward.description }}</p>
+            </div>
+            <div class="reward-controls">
+              <input
+                type="number"
+                class="reward-input"
+                [value]="getValue(reward.key)"
+                [step]="reward.step"
+                (change)="onInputChange(reward.key, $event)">
+              <button class="btn-reset" (click)="resetReward(reward.key)" title="Reset to default">↺</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="save-notice">
+      <p>Changes are automatically saved and applied to the environment.</p>
+    </div>
+  </div>
+</div>

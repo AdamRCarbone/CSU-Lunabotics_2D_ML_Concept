@@ -1,0 +1,71 @@
+.legend-container {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  font-family: system-ui, -apple-system, sans-serif;
+  width: 100%;
+}
+
+.legend-items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  padding: 0.1rem 0;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 0.5rem;
+  transition: background-color 0.2s ease;
+}
+
+.legend-item:hover {
+  background: rgba(28, 27, 31, 0.04);
+}
+
+.legend-item.active-zone {
+  background: rgba(142, 76, 255, 0.25);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.005);
+    background: rgba(142, 76, 255, 0.333);
+  }
+}
+
+.zone-indicator {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 0.25rem;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+
+.zone-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+  flex: 1;
+}
+
+.zone-name {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: #1c1b1f;
+  line-height: 1.25;
+}
+
+.zone-description {
+  font-size: 0.6875rem;
+  font-weight: 400;
+  color: #49454f;
+  line-height: 1.2;
+}

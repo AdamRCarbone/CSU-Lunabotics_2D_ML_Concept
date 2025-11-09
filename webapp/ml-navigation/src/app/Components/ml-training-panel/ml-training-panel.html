@@ -1,0 +1,160 @@
+<div class="ml-panel">
+  <div class="panel-header">
+    <h3>🤖 ML Training</h3>
+    <div class="status-indicator" [style.background-color]="getConnectionStatusColor()">
+      {{ getConnectionStatusText() }}
+    </div>
+  </div>
+
+  <div class="panel-content">
+    <!-- Connection Controls -->
+    <div class="control-section">
+      <h4>Connection</h4>
+      <div class="button-group">
+        <button
+          class="btn btn-primary"
+          (click)="connect()"
+          [disabled]="connectionStatus === 'connected' || connectionStatus === 'connecting'">
+          Connect to Python
+        </button>
+        <button
+          class="btn btn-secondary"
+          (click)="disconnect()"
+          [disabled]="connectionStatus === 'disconnected'">
+          Disconnect
+        </button>
+      </div>
+      <p class="hint">{{ getWebSocketUrl() }}</p>
+
+      <!-- Parallel Environment Info -->
+      <div class="parallel-env-info" *ngIf="connectionStatus === 'connected' && isParallelTraining">
+        <div class="env-badge">
+          🔄 Parallel Training - {{ parallelEnvCount }} environments
+        </div>
+        <p class="hint-small">Using multiple browser tabs for faster training</p>
+      </div>
+    </div>
+
+    <!-- Training Controls -->
+    <div class="control-section" *ngIf="connectionStatus === 'connected'">
+      <h4>Training</h4>
+      <div class="button-group">
+        <button
+          class="btn btn-success"
+          (click)="startTraining()"
+          [disabled]="isTraining">
+          ▶️ Start Training
+        </button>
+        <button
+          class="btn btn-warning"
+          (click)="stopTraining()"
+          [disabled]="!isTraining">
+          ⏸️ Stop Training
+        </button>
+      </div>
+      <div class="training-status" *ngIf="isTraining">
+        <span class="status-badge active">🔴 Training Active</span>
+        <p class="hint">Python agent is controlling the rover</p>
+        <p class="hint" *ngIf="checkpointName">Continuing from: {{ checkpointName }} ({{ checkpointSteps?.toLocaleString() }} steps)</p>
+      </div>
+    </div>
+
+    <!-- Episode Statistics -->
+    <div class="stats-section" *ngIf="episodeCount > 0">
+      <h4>Episode Statistics</h4>
+
+      <div class="stat-grid">
+        <div class="stat-card">
+          <div class="stat-label">Episodes</div>
+          <div class="stat-value">{{ episodeCount }}</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Avg Reward</div>
+          <div class="stat-value" [class.positive]="averageReward > 0" [class.negative]="averageReward < 0">
+            {{ averageReward.toFixed(2) }}
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Success Rate</div>
+          <div class="stat-value">{{ successRate.toFixed(1) }}%</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-label">Last Episode</div>
+          <div class="stat-value small">
+            <div>Reward: {{ lastEpisodeReward.toFixed(2) }}</div>
+            <div>Orbs: {{ lastEpisodeOrbsCollected }}</div>
+            <div>Steps: {{ currentEpisodeSteps }}</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Episodes -->
+      <div class="recent-episodes" *ngIf="recentEpisodes.length > 0">
+        <h5>Recent Episodes</h5>
+        <div class="episodes-list">
+          <div class="episode-row" *ngFor="let ep of recentEpisodes.slice().reverse()">
+            <span class="ep-num">#{{ ep.episode }}</span>
+            <span class="ep-reward" [class.positive]="ep.reward > 0" [class.negative]="ep.reward < 0">
+              R: {{ ep.reward.toFixed(1) }}
+            </span>
+            <span class="ep-orbs">🪨 {{ ep.orbs }}</span>
+            <span class="ep-steps">{{ ep.steps }} steps</span>
+          </div>
+        </div>
+      </div>
+
+      <button class="btn btn-link" (click)="resetStats()">Reset Statistics</button>
+    </div>
+
+    <!-- Configuration -->
+    <div class="config-section">
+      <h4 (click)="showAdvancedSettings = !showAdvancedSettings" style="cursor: pointer;">
+        ⚙️ Configuration
+        <span class="toggle-icon">{{ showAdvancedSettings ? '▼' : '▶' }}</span>
+      </h4>
+
+      <div class="config-content" *ngIf="showAdvancedSettings">
+        <div class="config-item">
+          <label>Max Episode Steps</label>
+          <input
+            type="number"
+            [(ngModel)]="maxEpisodeSteps"
+            min="100"
+            max="5000"
+            step="100"
+            class="config-input">
+        </div>
+
+        <button class="btn btn-primary" (click)="applyConfiguration()">Apply Config</button>
+
+        <p class="hint">Configuration applies to new episodes</p>
+      </div>
+    </div>
+
+    <!-- Instructions -->
+    <div class="instructions-section" *ngIf="connectionStatus === 'disconnected'">
+      <h4>📚 Getting Started</h4>
+      <p class="hint" style="margin-bottom: 0.5rem;"><strong>Single Environment (Standard):</strong></p>
+      <ol style="margin-bottom: 0.75rem;">
+        <li>Open terminal in <code>python-training/</code></li>
+        <li>Run: <code>python training/train_ppo.py</code></li>
+        <li>Click "Connect to Python" above</li>
+        <li>Open ONE browser tab at <code>localhost:4200</code></li>
+      </ol>
+
+      <p class="hint" style="margin-bottom: 0.5rem;"><strong>Parallel Training (Faster):</strong></p>
+      <ol>
+        <li>Open terminal in <code>python-training/</code></li>
+        <li>Run: <code>python training/train_ppo_parallel.py</code></li>
+        <li>Open 4 browser tabs at <code>localhost:4200</code></li>
+        <li>Connect each tab to a different port (8765-8768)</li>
+        <li>Training will be ~4x faster!</li>
+      </ol>
+
+      <p class="hint">Edit <code>NUM_ENVS</code> in script to change parallel count (2-8)</p>
+    </div>
+  </div>
+</div>
