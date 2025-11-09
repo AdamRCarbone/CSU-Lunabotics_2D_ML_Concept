@@ -75,7 +75,22 @@ class LunaboticsEnv(gym.Env):
                 4: STAGE_4_FULL_TASK
             }
             ml_stage_config = stage_configs.get(reward_stage, STAGE_4_FULL_TASK)
-            reward_config = RewardCalculator.config_from_mlconfig(ml_stage_config)
+
+            # Convert MLConfig to RewardCalculator dict format
+            reward_config = {
+                'time_step': ml_stage_config.step_penalty,
+                'reach_excavation_zone': ml_stage_config.return_to_excavation_reward,
+                'reach_construction_zone_with_orb': ml_stage_config.enter_construction_with_orbs_reward,
+                'collect_orb': ml_stage_config.grab_orb_reward,
+                'deposit_orb': ml_stage_config.deposit_berm_reward,
+                'collision_obstacle': ml_stage_config.collision_penalty,
+                'collision_wall': ml_stage_config.collision_penalty,
+                'progress_toward_excavation': 0.0,  # Not used in MLConfig
+                'progress_toward_construction': 0.0,  # Not used in MLConfig
+            }
+
+            # Store the full MLConfig for reference
+            self.ml_config = ml_stage_config
 
         self.env_config = env_config
         self.reward_calculator = RewardCalculator(reward_config)
