@@ -10,6 +10,7 @@ import { ParameterDisplay, Parameter } from "./Components/parameter_display/para
 import { ZoneLegend } from './Components/zone-legend/zone-legend';
 import { DetectedObstacles } from './Components/detected-obstacles/detected-obstacles';
 import { DetectedDiggableComponent } from './Components/detected-diggable/detected-diggable';
+import { TrainingMonitor } from './Components/training-monitor/training-monitor';
 import { Zone } from './enums/zone.enum';
 import { ResetTrigger } from './services/reset-trigger';
 import { InferenceService, ModelInfo } from './services/inference.service';
@@ -18,7 +19,7 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent, FormsModule, CommonModule],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent, TrainingMonitor, FormsModule, CommonModule],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -43,6 +44,9 @@ export class App implements AfterViewInit, OnDestroy {
     { name: 'Mode', value: 'OFF' }
   ];
   private resetSubscription?: Subscription;
+
+  // View mode
+  public viewMode: 'rover' | 'training' = 'rover';
 
   // AI Control properties
   public controlMode: 'manual' | 'ai' = 'manual';

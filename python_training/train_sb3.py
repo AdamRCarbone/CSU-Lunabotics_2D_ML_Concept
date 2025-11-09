@@ -106,7 +106,7 @@ class MetricsCallback(BaseCallback):
                     if self.episode_count % self.checkpoint_interval == 0:
                         checkpoint_path = self.checkpoint_dir / f"model_episode_{self.episode_count}"
                         self.model.save(checkpoint_path)
-                        print(f"\n✓ Checkpoint saved: {checkpoint_path}.zip")
+                        print(f"\n[CHECKPOINT] Saved: {checkpoint_path}.zip")
 
 
 def train(config_path: str):

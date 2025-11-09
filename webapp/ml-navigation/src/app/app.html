@@ -68,7 +68,24 @@
 </style>
 
 <main class="main">
-  <div class="content">
+  <!-- View Mode Toggle -->
+  <div style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+    <button
+      (click)="viewMode = 'rover'"
+      [style.background]="viewMode === 'rover' ? '#3498db' : '#95a5a6'"
+      style="padding: 0.75rem 1.5rem; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;">
+      Rover Control
+    </button>
+    <button
+      (click)="viewMode = 'training'"
+      [style.background]="viewMode === 'training' ? '#3498db' : '#95a5a5a6'"
+      style="padding: 0.75rem 1.5rem; color: white; border: none; border-radius: 0.5rem; cursor: pointer; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.2s;">
+      Training Monitor
+    </button>
+  </div>
+
+  <!-- Rover View -->
+  <div class="content" *ngIf="viewMode === 'rover'">
     <!-- Left Section: Zone & Parameters -->
     <div class="left-section">
       <div class="card" style="min-width: 220px;">
@@ -197,4 +214,7 @@
       </div>
     </div>
   </div>
+
+  <!-- Training Monitor View -->
+  <app-training-monitor *ngIf="viewMode === 'training'" style="width: 100%; max-width: 1600px;"></app-training-monitor>
 </main>
