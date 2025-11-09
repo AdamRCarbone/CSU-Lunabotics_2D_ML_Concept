@@ -183,8 +183,11 @@ def train(config_path: str):
     except KeyboardInterrupt:
         print("\n\nTraining interrupted by user")
 
-    # Save final model
+    # Save final model with exact episode number
     print("\nSaving final model...")
+    final_episode = callback.episode_count
+    model.save(checkpoint_dir / f"final_model_episode_{final_episode}")
+    # Also save as "final_model" for convenience
     model.save(checkpoint_dir / "final_model")
 
     print("\n" + "="*60)

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Chart, ChartConfiguration, ChartData, registerables } from 'chart.js';
@@ -45,7 +45,10 @@ export class TrainingMonitor implements OnInit, OnDestroy {
   isEditingConfig = false;
   editableConfig: any = {};
 
-  constructor(private wsService: TrainingWebsocketService) {}
+  constructor(
+    private wsService: TrainingWebsocketService,
+    private cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit() {
     // Connect to WebSocket
@@ -130,6 +133,9 @@ export class TrainingMonitor implements OnInit, OnDestroy {
 
     // Update charts
     this.updateCharts();
+
+    // Trigger change detection to update metrics display
+    this.cdr.detectChanges();
   }
 
   private loadHistory(history: TrainingMetrics[]) {
@@ -188,7 +194,14 @@ export class TrainingMonitor implements OnInit, OnDestroy {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: 'Episode' } },
+            x: {
+              title: { display: true, text: 'Episode' },
+              type: 'linear',
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10
+              }
+            },
             y: { title: { display: true, text: 'Reward' } }
           },
           animation: { duration: 0 }
@@ -219,7 +232,14 @@ export class TrainingMonitor implements OnInit, OnDestroy {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: 'Episode' } },
+            x: {
+              title: { display: true, text: 'Episode' },
+              type: 'linear',
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10
+              }
+            },
             y: { title: { display: true, text: 'Loss' } }
           },
           animation: { duration: 0 }
@@ -251,7 +271,14 @@ export class TrainingMonitor implements OnInit, OnDestroy {
           responsive: true,
           maintainAspectRatio: false,
           scales: {
-            x: { title: { display: true, text: 'Episode' } },
+            x: {
+              title: { display: true, text: 'Episode' },
+              type: 'linear',
+              ticks: {
+                autoSkip: true,
+                maxTicksLimit: 10
+              }
+            },
             y: {
               title: { display: true, text: 'Success Rate (%)' },
               min: 0,
@@ -269,19 +296,20 @@ export class TrainingMonitor implements OnInit, OnDestroy {
       this.rewardChart.data.labels = this.episodeHistory;
       this.rewardChart.data.datasets[0].data = this.rewardHistory;
       this.rewardChart.data.datasets[1].data = this.avgRewardHistory;
-      this.rewardChart.update('none');
+      // Use 'resize' mode to force scale recalculation
+      this.rewardChart.update('resize');
     }
 
     if (this.lossChart) {
       this.lossChart.data.labels = this.episodeHistory;
       this.lossChart.data.datasets[0].data = this.lossHistory;
-      this.lossChart.update('none');
+      this.lossChart.update('resize');
     }
 
     if (this.successChart) {
       this.successChart.data.labels = this.episodeHistory;
       this.successChart.data.datasets[0].data = this.successRateHistory;
-      this.successChart.update('none');
+      this.successChart.update('resize');
     }
   }
 
