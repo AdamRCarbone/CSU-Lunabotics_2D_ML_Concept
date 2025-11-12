@@ -1,6 +1,0 @@
-{
-  "dependencies": {
-    "@types/matter-js": "^0.20.2",
-    "matter-js": "^0.20.0"
-  }
-}
