@@ -1,5 +1,6 @@
 import time
-from shapes import Rectangle, Circle, Zone, Obstacle, Rover
+import random
+from shapes import Rectangle, Circle, Zone, Obstacle, Rover, Boulder
 import tkinter as tk
 
 
@@ -29,6 +30,8 @@ def loop():
     global keys_pressed
     global root
     global bot
+    global boulders
+    global start_zone
 
     # update the speed of Rover
     # update the position of Rover
@@ -46,6 +49,10 @@ def loop():
                 bot.torque_left(-5)
 
     bot.update()
+    for b in boulders:
+        if bot.collides(b):
+            print('COLLISION')
+
     root.after(20, loop)
 
 
@@ -55,12 +62,25 @@ canvas = tk.Canvas(root, width=688, height=500, bg="white")
 canvas.pack()
 
 arena = Zone(canvas, (0, 5), (6.88, 0), 'blue')
-excavation_zone = Zone(canvas, (0, 5), (2.5, 0), 'green')
-obstacle_zone = Zone(canvas, (2.5, 5), (6.88, 0), 'red')
-start_zone = Zone(canvas, (0, 2), (2, 0), 'blue')
+excavation_zone = Zone(canvas, (0, 5), (2.5, 0), 'light blue')
+obstacle_zone = Zone(canvas, (2.5, 5), (6.88, 0), 'white')
+start_zone = Zone(canvas, (0, 2), (2, 0), 'light green')
+construction_zone = Zone(canvas, (4.58, .8), (4.58+1.7, .1), 'red')
 # c = Circle(canvas, 25, 150, 500, color='purple')
 print('bot vvv')
 bot = Rover(canvas)
+boulders = []
+for _ in range(random.randint(6, 12)):
+    while True:
+        boulder = Boulder(canvas)
+        for b in boulders:
+            if boulder.collides(b) or boulder.collides(start_zone):
+                boulder.delete()
+                break
+        else:
+            boulders.append(boulder)
+            break
+
 
 arena.add(excavation_zone)
 arena.add(obstacle_zone)

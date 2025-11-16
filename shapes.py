@@ -1,6 +1,10 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import math
+import random
+
+ARENA_WIDTH = 6.88
+ARENA_HEIGHT = 5
 
 
 class Shape(ABC):
@@ -17,6 +21,9 @@ class Shape(ABC):
     def meters_to_pixels(self, val):
         return self.scale * val
 
+    def delete(self):
+        self._canvas.delete(self._obj)
+
 
 class Rectangle(Shape):
     '''
@@ -26,7 +33,6 @@ class Rectangle(Shape):
 
     def __init__(self, canvas, width, height, x, y, angle=0, color='white', outline_color='black', **kwargs):
         super().__init__(canvas, color, outline_color)
-        print('here')
 
         # set class variables
         self._width = width
@@ -89,39 +95,115 @@ class Rectangle(Shape):
         self._y = rot_y + y
         self._angle += da
 
+    def contains(self, point):
+        "Check if point  is inside the rectangle"
+        inside = False
+        n = len(self.corners)
+        for i in range(n):
+            x1, y1 = self.corners[i]
+            x2, y2 = self.corners[(i + 1) % n]
+            if ((y1 > point[1]) != (y2 > point[1])) and \
+               (point[0] < (x2 - x1) * (point[1] - y1) / (y2 - y1 + 1e-12) + x1):
+                inside = not inside
+        return inside
+
+    def rectangle_overlap(self, other):
+        """Check if two rotated rectangles overlap using SAT.
+
+        rect1, rect2: lists of 4 vertices [(x1,y1), ..., (x4,y4)]
+        """
+        def get_axes(rect):
+            # Get perpendicular (normal) vectors of rectangle edges
+            return [(-(y2-y1), x2-x1)
+                    for (x1, y1), (x2, y2) in zip(rect, rect[1:] + rect[:1])]
+
+        def project(rect, axis):
+            # Project rectangle onto axis
+            dots = [x*axis[0] + y*axis[1] for x, y in rect]
+            return min(dots), max(dots)
+
+        for axis in get_axes(self.corners) + get_axes(other.corners):
+            length = math.hypot(*axis)
+            if length == 0:
+                continue
+            axis = (axis[0]/length, axis[1]/length)  # normalize
+            min1, max1 = project(self.corners, axis)
+            min2, max2 = project(other.corners, axis)
+            if max1 < min2 or max2 < min1:  # separating axis found
+                return False
+        return True  # no separating axis found
+
+    def circle_overlap(self, other):
+
+        def distance_point_to_segment(px, py, x1, y1, x2, y2):
+            """Compute the minimum distance from point (px, py)
+            to line segment (x1,y1)-(x2,y2)"""
+            # Vector from segment start to end
+            vx, vy = x2 - x1, y2 - y1
+            # Vector from segment start to point
+            wx, wy = px - x1, py - y1
+            # Project point onto line, clamped to [0,1] for segment
+            t = max(0, min(1, (wx * vx + wy * vy) / (vx * vx + vy * vy + 1e-12)))
+            closest_x = x1 + t * vx
+            closest_y = y1 + t * vy
+            # Distance squared
+            dx = px - closest_x
+            dy = py - closest_y
+            return math.hypot(dx, dy)
+
+        # 1. Check if circle center is inside rectangle
+        if self.contains((other.x, other.y)):
+            return True
+
+        # 2. Check if circle intersects any rectangle edge
+        for i in range(4):
+            x1, y1 = self.corners[i]
+            x2, y2 = self.corners[(i + 1) % 4]
+            if distance_point_to_segment(other.x, other.y, x1, y1, x2, y2) <= other.radius:
+                return True
+
+        # 3. No overlap
+        return False
+
+    def collides(self, other):
+        if isinstance(other, Circle):
+            return self.circle_overlap(other)
+        elif isinstance(other, Rectangle):
+            return self.rectangle_overlap(other)
+
 
 class Circle(Shape):
     def __init__(self, canvas, radius, x, y, color='white', outline_color='black'):
         super().__init__(canvas, color, outline_color)
-        self._radius = radius
-        self._x = x
-        self._y = y
+        self.radius = radius
+        self.x = x
+        self.y = y
+        radius = self.meters_to_pixels(radius)
+        x, y = self.arena_to_canvas(x, y)
         self._obj = self._canvas.create_oval(
-            self._x-self._radius,
-            self._y-self._radius,
-            self._x+self._radius,
-            self._y+self._radius,
+            x-radius,
+            y-radius,
+            x+radius,
+            y+radius,
             fill=self.color,
             outline=self.outline_color,
             width=1
         )
 
     def set_x(self, x):
-        self.move(x-self._x, 0)
-        self._lock.acquire()
-        self._x = x
-        self._lock.release()
+        self._canvas.move(self._obj, x-self.x, 0)
+        self.x = x
 
     def set_y(self, y):
-        self.move(0, y-self._y)
-        self._lock.acquire()
-        self._y = y
-        self._lock.release()
+        self._canvas.move(self._obj, 0, y-self.y)
+        self.y = y
 
-    def move(self, dx, dy):
-        self._lock.acquire()
-        self._canvas.move(self._obj, dx, dy)
-        self._lock.release()
+    def contains(self, point):
+        return ((point[0] - self.x)**2 + (point[1] - self.y)**2)**.5 <= self.radius
+
+    def collides(self, other):
+        if isinstance(other, Circle):
+            return ((other.x - self.x)**2 + (other.y - self.y)**2)**.5 <= self.radius + other.radius
 
 
 class PhysicsObject(ABC):
@@ -207,23 +289,32 @@ class Obstacle(MapObject):
         super().__init__(**kwargs)
 
 
+class Boulder(Obstacle, Circle):
+    def __init__(self, canvas, x=None, y=None, radius=None, color='gray', outline_color='black'):
+        if not radius:
+            # assign a random radius from 30-40cm
+            radius = (random.random() * .1 + .3)/2
+
+        # Fill in x and y if they are not already. Cut off a radius
+        # from each side so half the rock isnt off the screen
+        if not x:
+            x = random.random() * (ARENA_WIDTH - 2*radius) + radius
+        if not y:
+            y = random.random() * (ARENA_HEIGHT - 2*radius) + radius
+
+        super().__init__(
+            canvas=canvas,
+            radius=radius,
+            x=x,
+            y=y,
+            color=color,
+            outline_color=outline_color
+        )
+
+
 class Rover(PhysicsRectangle):
     def __init__(self, canvas):
         super().__init__(canvas, .75, 1.5, 1, 1, 'black', 'black', mass=80)
-
-    def drive_left(self, magnitude):
-        if magnitude > 0:
-            self.torque_right(magnitude)
-        else:
-            self.torque(magnitude, 0)
-        # self.force(5, self._angle + 90)
-
-    def drive_right(self, magnitude):
-        if magnitude > 0:
-            self.torque(magnitude, 1)
-        else:
-            self.torque(magnitude, 2)
-        # self.force(5, self._angle + 90)
 
 
 class Zone(MapObject, Rectangle):
