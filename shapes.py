@@ -204,6 +204,8 @@ class Circle(Shape):
     def collides(self, other):
         if isinstance(other, Circle):
             return ((other.x - self.x)**2 + (other.y - self.y)**2)**.5 <= self.radius + other.radius
+        elif isinstance(other, Rectangle):
+            return other.collides(self)
 
 
 class PhysicsObject(ABC):
@@ -290,10 +292,33 @@ class Obstacle(MapObject):
 
 
 class Boulder(Obstacle, Circle):
-    def __init__(self, canvas, x=None, y=None, radius=None, color='gray', outline_color='black'):
+    def __init__(self, canvas, x=None, y=None, radius=None, color='light gray', outline_color='black'):
         if not radius:
             # assign a random radius from 30-40cm
             radius = (random.random() * .1 + .3)/2
+
+        # Fill in x and y if they are not already. Cut off a radius
+        # from each side so half the rock isnt off the screen
+        if not x:
+            x = random.random() * (ARENA_WIDTH - 2*radius) + radius
+        if not y:
+            y = random.random() * (ARENA_HEIGHT - 2*radius) + radius
+
+        super().__init__(
+            canvas=canvas,
+            radius=radius,
+            x=x,
+            y=y,
+            color=color,
+            outline_color=outline_color
+        )
+
+
+class Crater(Obstacle, Circle):
+    def __init__(self, canvas, x=None, y=None, radius=None, color='gray', outline_color='black'):
+        if not radius:
+            # assign a random radius from 30-40cm
+            radius = (random.random() * .1 + .4)/2
 
         # Fill in x and y if they are not already. Cut off a radius
         # from each side so half the rock isnt off the screen
@@ -321,7 +346,6 @@ class Zone(MapObject, Rectangle):
     def __init__(self, canvas, top_left, bottom_right, color):
         width = bottom_right[0]-top_left[0]
         height = top_left[1]-bottom_right[1]
-        print(width, height)
         super().__init__(
             canvas=canvas,
             width=width,
