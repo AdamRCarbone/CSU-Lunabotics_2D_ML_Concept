@@ -2,6 +2,7 @@ import time
 import random
 from shapes import Rectangle, Circle, Zone, Obstacle, Rover, Boulder, Crater
 import tkinter as tk
+from PIL import Image, ImageTk
 
 
 keys_pressed = []
@@ -17,12 +18,29 @@ def on_key_release(event):
     keys_pressed.remove(event.keysym)
 
 
+angle = 10
+
+
 def loop():
     global keys_pressed
     global root
     global rover
     global boulders
     global start_zone
+    global img, img_tk
+    global canvas_img, angle
+
+    # img = Image.open("resources/rover.png")
+    # print(img.size)
+    # img = img.rotate(angle, expand=True)
+    # angle += 10
+    # w, h = img.size
+    # w = round(w*.75)
+    # h = round(h*.75)
+    # img = img.resize((w, h), Image.Resampling.LANCZOS)
+    # img_tk = ImageTk.PhotoImage(img)
+    # canvas.itemconfig(canvas_img, image=img_tk)
+    # canvas.coords(canvas_img, 250-w/2, 250-h/2)
 
     # update the speed of Rover
     # update the position of Rover
@@ -83,7 +101,6 @@ def reset_arena():
 
     for o in obstacles:
         o.delete()
-
     obstacles = []
 
     for _ in range(random.randint(6, 12)):
@@ -102,17 +119,22 @@ canvas.pack()
 
 arena = Zone(canvas, (0, 5), (6.88, 0), 'blue')
 excavation_zone = Zone(canvas, (0, 5), (2.5, 0), 'light blue')
-obstacle_zone = Zone(canvas, (2.5, 5), (6.88, 0), 'white')
-start_zone = Zone(canvas, (0, 2), (2, 0), 'light green')
-construction_zone = Zone(canvas, (4.58, .8), (4.58+1.7, .1), 'red')
+obstacle_zone = Zone(canvas, (2.5, 5), (6.88, 0), 'light yellow', 'yellow')
+start_zone = Zone(canvas, (0, 2), (2, 0), 'light green', 'green')
+construction_zone = Zone(
+    canvas, (4.58, .8), (4.58+1.7, .1), '#FFCC99', 'orange')
 column = Zone(canvas, (3.44-.25, 2.5-.25), (3.44+.25, 2.5+.25), 'gray')
 obstacles = []
 
+
 rover = Rover(canvas)
+# img = Image.open("resources/rover.png")
+# img_tk = ImageTk.PhotoImage(img)
+# Add it to the canvas (x=0, y=0 or wherever you want)
+# canvas_img = canvas.create_image(0, 0, image=img_tk, anchor="nw")
 reset_arena()
 
 root.bind('<KeyPress>', on_key_press)
 root.bind('<KeyRelease>', on_key_release)
 loop()
 root.mainloop()
-# thread.join()

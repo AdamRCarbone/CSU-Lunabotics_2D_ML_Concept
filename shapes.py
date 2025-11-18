@@ -1,5 +1,6 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from PIL import Image, ImageTk
 import math
 import random
 
@@ -339,11 +340,37 @@ class Crater(Obstacle, Circle):
 
 class Rover(PhysicsRectangle):
     def __init__(self, canvas):
-        super().__init__(canvas, .75, 1.5, 1, 1, 'black', 'black', mass=80)
+        super().__init__(canvas, .75, 1.5, 1, 1, '', '', mass=80)
+        self.img_path = 'resources/rover.png'
+        img = Image.open(self.img_path)
+        self.img_tk = ImageTk.PhotoImage(img)
+        self.image_obj = canvas.create_image(0, 0, image=self.img_tk)
+
+    def draw_image(self):
+        img = Image.open(self.img_path)
+        w, h = img.size
+        img_scale = .75 / (w / self.scale)
+        img = img.rotate(-self._angle, expand=True)
+        # get the width and height again because the
+        # bounding box changes for a bigger picture
+        w, h = img.size
+        img_w = round(w * img_scale)
+        img_h = round(h * img_scale)
+
+        img_x = self.scale * self._x
+        img_y = 500 - self.scale * self._y
+        img = img.resize((img_w, img_h), Image.Resampling.LANCZOS)
+        self.img_tk = ImageTk.PhotoImage(img)
+        self._canvas.itemconfig(self.image_obj, image=self.img_tk)
+        self._canvas.coords(self.image_obj, img_x, img_y)
+
+    def update(self):
+        super().update()
+        self.draw_image()
 
 
 class Zone(MapObject, Rectangle):
-    def __init__(self, canvas, top_left, bottom_right, color):
+    def __init__(self, canvas, top_left, bottom_right, color, outline_color='black'):
         width = bottom_right[0]-top_left[0]
         height = top_left[1]-bottom_right[1]
         super().__init__(
@@ -352,5 +379,6 @@ class Zone(MapObject, Rectangle):
             height=height,
             x=top_left[0] + width/2,
             y=bottom_right[1] + height/2,
-            color=color
+            color=color,
+            outline_color=outline_color
         )
