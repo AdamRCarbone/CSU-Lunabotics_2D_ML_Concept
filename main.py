@@ -67,7 +67,7 @@ def loop():
         if rover.collides(column):
             collision = True
 
-    if collision:
+    if collision or not rover.is_in_bounds():
         reset_arena()
 
     root.after(20, loop)

@@ -1,11 +1,9 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from constants import ARENA
 from PIL import Image, ImageTk
 import math
 import random
-
-ARENA_WIDTH = 6.88
-ARENA_HEIGHT = 5
 
 
 class Shape(ABC):
@@ -107,6 +105,13 @@ class Rectangle(Shape):
                (point[0] < (x2 - x1) * (point[1] - y1) / (y2 - y1 + 1e-12) + x1):
                 inside = not inside
         return inside
+
+    def is_in_bounds(self):
+        for corner in self.corners:
+            x, y = corner
+            if x < 0 or x > ARENA['width'] or y < 0 or y > ARENA['height']:
+                return False
+        return True
 
     def rectangle_overlap(self, other):
         """Check if two rotated rectangles overlap using SAT.
@@ -301,9 +306,9 @@ class Boulder(Obstacle, Circle):
         # Fill in x and y if they are not already. Cut off a radius
         # from each side so half the rock isnt off the screen
         if not x:
-            x = random.random() * (ARENA_WIDTH - 2*radius) + radius
+            x = random.random() * (ARENA['width'] - 2*radius) + radius
         if not y:
-            y = random.random() * (ARENA_HEIGHT - 2*radius) + radius
+            y = random.random() * (ARENA['height'] - 2*radius) + radius
 
         super().__init__(
             canvas=canvas,
@@ -324,9 +329,9 @@ class Crater(Obstacle, Circle):
         # Fill in x and y if they are not already. Cut off a radius
         # from each side so half the rock isnt off the screen
         if not x:
-            x = random.random() * (ARENA_WIDTH - 2*radius) + radius
+            x = random.random() * (ARENA['width'] - 2*radius) + radius
         if not y:
-            y = random.random() * (ARENA_HEIGHT - 2*radius) + radius
+            y = random.random() * (ARENA['height'] - 2*radius) + radius
 
         super().__init__(
             canvas=canvas,
