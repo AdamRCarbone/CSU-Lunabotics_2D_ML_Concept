@@ -1,12 +1,13 @@
 import random
 import tkinter as tk
 from shapes import Zone, Rover, Boulder, Crater
+from styles import Sim
 
 
 class Environment:
     def __init__(self, parent):
         # Canvas
-        self.canvas = tk.Canvas(parent, width=688, height=500, bg="white")
+        self.canvas = tk.Canvas(parent, width=688, height=500, bg=Sim.CANVAS_BG)
         self.canvas.pack()
 
         # State
@@ -19,16 +20,16 @@ class Environment:
         self._create_zones()
         self.rover = Rover(self.canvas)
         self.reset_arena()
-        
+
     # Arena zones
     def _create_zones(self):
-        self.arena = Zone(self.canvas, (0, 5), (6.88, 0), 'blue')
-        self.excavation_zone = Zone(self.canvas, (0, 5), (2.5, 0), 'light blue')
-        self.obstacle_zone = Zone(self.canvas, (2.5, 5), (6.88, 0), 'light yellow', 'yellow')
-        self.start_zone = Zone(self.canvas, (0, 2), (2, 0), 'light green', 'green')
+        self.arena = Zone(self.canvas, (0, 5), (6.88, 0), Sim.ARENA)
+        self.excavation_zone = Zone(self.canvas, (0, 5), (2.5, 0), Sim.EXCAVATION)
+        self.obstacle_zone = Zone(self.canvas, (2.5, 5), (6.88, 0), Sim.OBSTACLE, Sim.OBSTACLE_OUTLINE)
+        self.start_zone = Zone(self.canvas, (0, 2), (2, 0), Sim.START, Sim.START_OUTLINE)
         self.construction_zone = Zone(
-            self.canvas, (4.58, .8), (4.58+1.7, .1), '#FFCC99', 'orange')
-        self.column = Zone(self.canvas, (3.44-.25, 2.5-.25), (3.44+.25, 2.5+.25), 'gray')
+            self.canvas, (4.58, .8), (4.58+1.7, .1), Sim.CONSTRUCTION, Sim.CONSTRUCTION_OUTLINE)
+        self.column = Zone(self.canvas, (3.44-.25, 2.5-.25), (3.44+.25, 2.5+.25), Sim.COLUMN)
 
     # Key Stuff
     def on_key_press(self, event):
