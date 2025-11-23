@@ -2,15 +2,10 @@ import tkinter as tk
 import customtkinter as ctk
 from environment import Environment
 from styles import UI, Sim
-from shapes import SCALE
+from window import Window
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
-
-# Layout constants
-LEFT_SIDEBAR_WIDTH = 250
-RIGHT_SIDEBAR_WIDTH = 500
-
 
 class MainWindow:
     def __init__(self, root):
@@ -22,8 +17,31 @@ class MainWindow:
         self.root.bind('<KeyPress>', self.environment.on_key_press)
         self.root.bind('<KeyRelease>', self.environment.on_key_release)
 
+        # Bind window resize event
+        self.root.bind('<Configure>', self._on_window_resize)
+
         # Start loop
         self._loop()
+
+    # Called when window is resized - update UI proportions
+    def _on_window_resize(self, event):
+        # Only handle resize events for the root window, not child widgets
+        if event.widget == self.root:
+            new_width = event.width
+            new_height = event.height
+
+            # Recalculate sidebar widths based on new window size
+            new_left_width = int(new_width * Window.LEFT_SIDEBAR_WIDTH_RATIO)
+            new_right_width = int(new_width * Window.RIGHT_SIDEBAR_WIDTH_RATIO)
+
+            # Update sidebar widths
+            if hasattr(self, 'left_sidebar'):
+                self.left_sidebar.configure(width=new_left_width)
+            if hasattr(self, 'right_sidebar'):
+                self.right_sidebar.configure(width=new_right_width)
+
+            # Recalculate environment scale based on new window size
+            Window.resize_environment(self.environment, new_width, new_height)
 
     def _create_layout(self):
         self.root.configure(bg=UI.WINDOW_BG)
@@ -42,9 +60,10 @@ class MainWindow:
         canvas_frame.pack(fill=tk.BOTH, expand=True)
 
     def createLeftSidebar(self):
-        sidebar = ctk.CTkFrame(self.root, width=LEFT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
-        sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=0)
-        sidebar.pack_propagate(False)
+        self.left_sidebar = ctk.CTkFrame(self.root, width=Window.LEFT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
+        self.left_sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=0)
+        self.left_sidebar.pack_propagate(False)
+        sidebar = self.left_sidebar 
 
         # Title
         title = ctk.CTkLabel(
@@ -113,9 +132,10 @@ class MainWindow:
         self.pause_btn.pack(pady=5, padx=20)
 
     def createRightSidebar(self):
-        sidebar = ctk.CTkFrame(self.root, width=RIGHT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
-        sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=0, pady=0)
-        sidebar.pack_propagate(False)
+        self.right_sidebar = ctk.CTkFrame(self.root, width=Window.RIGHT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
+        self.right_sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=0, pady=0)
+        self.right_sidebar.pack_propagate(False)
+        sidebar = self.right_sidebar  # For compatibility with existing code
 
         # Reset button
         reset_btn = ctk.CTkButton(
@@ -142,10 +162,8 @@ class MainWindow:
 
 def main():
     root = ctk.CTk()  # Use CustomTkinter root
-    # Calculate window size dynamically from environment canvas size
-    window_width = LEFT_SIDEBAR_WIDTH + Environment.CANVAS_WIDTH/(SCALE/100) + RIGHT_SIDEBAR_WIDTH + 20
-    window_height = Environment.CANVAS_HEIGHT + 100  # +100 for title bar and padding
-    root.geometry(f"{window_width}x{window_height}")
+    # Use calculated window size from Window
+    root.geometry(f"{Window.width}x{Window.height}")
     app = MainWindow(root)
     root.mainloop()
 

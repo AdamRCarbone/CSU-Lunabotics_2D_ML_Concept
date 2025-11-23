@@ -6,7 +6,7 @@ import random
 
 ARENA_WIDTH = 6.88  # meters
 ARENA_HEIGHT = 5    # meters
-SCALE = 100  # pixels per meter
+SCALE = 100  # pixels per meter (dynamically set by window.py based on screen size)
 
 
 class Shape(ABC):
@@ -25,6 +25,11 @@ class Shape(ABC):
 
     def delete(self):
         self._canvas.delete(self._obj)
+
+    @abstractmethod
+    def redraw(self):
+        """Redraw the shape at its current position with current scale"""
+        pass
 
 
 class Rectangle(Shape):
@@ -181,6 +186,10 @@ class Rectangle(Shape):
         elif isinstance(other, Rectangle):
             return self.rectangle_overlap(other)
 
+    def redraw(self):
+        """Redraw rectangle at current position with current scale"""
+        self.calculate_corners()
+
 
 class Circle(Shape):
     def __init__(self, canvas, radius, x, y, color='white', outline_color='black'):
@@ -216,6 +225,20 @@ class Circle(Shape):
             return ((other.x - self.x)**2 + (other.y - self.y)**2)**.5 <= self.radius + other.radius
         elif isinstance(other, Rectangle):
             return other.collides(self)
+
+    def redraw(self):
+        """Redraw circle at current position with current scale"""
+        radius_px = self.meters_to_pixels(self.radius)
+        x, y = self.arena_to_canvas(self.x, self.y)
+        self._obj = self._canvas.create_oval(
+            x - radius_px,
+            y - radius_px,
+            x + radius_px,
+            y + radius_px,
+            fill=self.color,
+            outline=self.outline_color,
+            width=1
+        )
 
 
 class PhysicsObject(ABC):
@@ -378,6 +401,13 @@ class Rover(PhysicsRectangle):
     def update(self):
         super().update()
         self.draw_image()
+
+    def redraw(self):
+        """Redraw rover rectangle and image at current position with current scale"""
+        # Redraw the rectangle shape
+        super().redraw()
+        # Recreate the image object (since canvas.delete("all") removed it)
+        self.image_obj = self._canvas.create_image(0, 0, image=self.img_tk)
 
 
 class Zone(MapObject, Rectangle):
