@@ -106,7 +106,8 @@ class Environment:
             if self.rover.collides(self.column):
                 collision = True
 
-        if collision:
+        # Check wall collision (out of bounds)
+        if collision or not self.rover.is_in_bounds():
             self.reset_arena()
 
     # Start sim

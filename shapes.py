@@ -108,6 +108,14 @@ class Rectangle(Shape):
                 inside = not inside
         return inside
 
+    def is_in_bounds(self):
+        """Check if rectangle is within arena bounds"""
+        for corner in self.corners:
+            x, y = corner
+            if x < 0 or x > ARENA_WIDTH or y < 0 or y > ARENA_HEIGHT:
+                return False
+        return True
+
     def rectangle_overlap(self, other):
         """Check if two rotated rectangles overlap using SAT.
 
