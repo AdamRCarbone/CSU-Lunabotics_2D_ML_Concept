@@ -1,13 +1,17 @@
 import random
 import tkinter as tk
-from shapes import Zone, Rover, Boulder, Crater
+from shapes import Zone, Rover, Boulder, Crater, ARENA_WIDTH, ARENA_HEIGHT, SCALE
 from styles import Sim
 
 
 class Environment:
+    # Calculate canvas dimensions from arena size and scale
+    CANVAS_WIDTH = int(ARENA_WIDTH * SCALE)
+    CANVAS_HEIGHT = int(ARENA_HEIGHT * SCALE)
+
     def __init__(self, parent):
         # Canvas
-        self.canvas = tk.Canvas(parent, width=688, height=500, bg=Sim.CANVAS_BG)
+        self.canvas = tk.Canvas(parent, width=self.CANVAS_WIDTH, height=self.CANVAS_HEIGHT, bg=Sim.CANVAS_BG)
         self.canvas.pack()
 
         # State

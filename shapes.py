@@ -4,12 +4,13 @@ from PIL import Image, ImageTk
 import math
 import random
 
-ARENA_WIDTH = 6.88
-ARENA_HEIGHT = 5
+ARENA_WIDTH = 6.88  # meters
+ARENA_HEIGHT = 5    # meters
+SCALE = 100  # pixels per meter
 
 
 class Shape(ABC):
-    scale = 100
+    scale = SCALE
 
     def __init__(self, canvas, color, outline_color):
         self.color = color
@@ -17,7 +18,7 @@ class Shape(ABC):
         self._canvas = canvas
 
     def arena_to_canvas(self, x, y):
-        return (self.scale * x, self.scale * (5-y))
+        return (self.scale * x, self.scale * (ARENA_HEIGHT - y))
 
     def meters_to_pixels(self, val):
         return self.scale * val
@@ -355,6 +356,8 @@ class Rover(PhysicsRectangle):
         self.image_obj = canvas.create_image(0, 0, image=self.img_tk)
 
     def draw_image(self):
+        scale = SCALE
+
         img = Image.open(self.img_path)
         w, h = img.size
         img_scale = .75 / (w / self.scale)
@@ -366,7 +369,7 @@ class Rover(PhysicsRectangle):
         img_h = round(h * img_scale)
 
         img_x = self.scale * self._x
-        img_y = 500 - self.scale * self._y
+        img_y = (ARENA_HEIGHT * SCALE) - self.scale * self._y
         img = img.resize((img_w, img_h), Image.Resampling.LANCZOS)
         self.img_tk = ImageTk.PhotoImage(img)
         self._canvas.itemconfig(self.image_obj, image=self.img_tk)

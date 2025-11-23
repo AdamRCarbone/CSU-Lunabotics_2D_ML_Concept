@@ -2,6 +2,7 @@ import tkinter as tk
 import customtkinter as ctk
 from environment import Environment
 from styles import UI, Sim
+from shapes import SCALE
 
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
@@ -9,9 +10,6 @@ ctk.set_default_color_theme("green")
 # Layout constants
 LEFT_SIDEBAR_WIDTH = 250
 RIGHT_SIDEBAR_WIDTH = 500
-CANVAS_WIDTH = 450
-TOTAL_WIDTH = LEFT_SIDEBAR_WIDTH + CANVAS_WIDTH + RIGHT_SIDEBAR_WIDTH
-CANVAS_HEIGHT = (TOTAL_WIDTH/16)*9
 
 
 class MainWindow:
@@ -144,9 +142,9 @@ class MainWindow:
 
 def main():
     root = ctk.CTk()  # Use CustomTkinter root
-    # Calculate window size dynamically from layout constants
-    window_width = LEFT_SIDEBAR_WIDTH + CANVAS_WIDTH + RIGHT_SIDEBAR_WIDTH + 20  # +20 for padding
-    window_height = CANVAS_HEIGHT + 100  # +100 for title bar and padding
+    # Calculate window size dynamically from environment canvas size
+    window_width = LEFT_SIDEBAR_WIDTH + Environment.CANVAS_WIDTH/(SCALE/100) + RIGHT_SIDEBAR_WIDTH + 20
+    window_height = Environment.CANVAS_HEIGHT + 100  # +100 for title bar and padding
     root.geometry(f"{window_width}x{window_height}")
     app = MainWindow(root)
     root.mainloop()
