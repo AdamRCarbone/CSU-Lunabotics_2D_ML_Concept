@@ -38,7 +38,7 @@ class Rectangle(Shape):
     the rectangle can be rotated by any amount
     '''
 
-    def __init__(self, canvas, width, height, x, y, angle=0, color='white', outline_color='black', **kwargs):
+    def __init__(self, canvas, width, height, x, y, angle=0, color='white', outline_color='black', outline_width=None, **kwargs):
         super().__init__(canvas, color, outline_color)
 
         # set class variables
@@ -48,11 +48,16 @@ class Rectangle(Shape):
         self._y = y
         self._angle = angle
 
+        from styles import Sim
+        # Use provided outline_width or default to rover width
+        if outline_width is None:
+            outline_width = Sim.rover_outline_width()
+
         self._obj = self._canvas.create_polygon(
             [0]*8,
             fill=self.color,
             outline=self.outline_color,
-            width=3
+            width=outline_width
         )
         self.calculate_corners()
 
@@ -197,6 +202,7 @@ class Circle(Shape):
         self.radius = radius
         self.x = x
         self.y = y
+        from styles import Sim
         radius = self.meters_to_pixels(radius)
         x, y = self.arena_to_canvas(x, y)
         self._obj = self._canvas.create_oval(
@@ -206,7 +212,7 @@ class Circle(Shape):
             y+radius,
             fill=self.color,
             outline=self.outline_color,
-            width=1
+            width=Sim.object_outline_width()  # Dynamic width for obstacles
         )
 
     def set_x(self, x):
@@ -228,6 +234,7 @@ class Circle(Shape):
 
     def redraw(self):
         """Redraw circle at current position with current scale"""
+        from styles import Sim
         radius_px = self.meters_to_pixels(self.radius)
         x, y = self.arena_to_canvas(self.x, self.y)
         self._obj = self._canvas.create_oval(
@@ -237,7 +244,7 @@ class Circle(Shape):
             y + radius_px,
             fill=self.color,
             outline=self.outline_color,
-            width=1
+            width=Sim.object_outline_width()  # Dynamic width for obstacles
         )
 
 
@@ -412,6 +419,7 @@ class Rover(PhysicsRectangle):
 
 class Zone(MapObject, Rectangle):
     def __init__(self, canvas, top_left, bottom_right, color, outline_color='black'):
+        from styles import Sim
         width = bottom_right[0]-top_left[0]
         height = top_left[1]-bottom_right[1]
         super().__init__(
@@ -421,5 +429,6 @@ class Zone(MapObject, Rectangle):
             x=top_left[0] + width/2,
             y=bottom_right[1] + height/2,
             color=color,
-            outline_color=outline_color
+            outline_color=outline_color,
+            outline_width=Sim.zone_outline_width()  # Use zone-specific width
         )
