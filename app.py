@@ -6,6 +6,13 @@ from styles import UI, Sim
 ctk.set_appearance_mode("light")
 ctk.set_default_color_theme("green")
 
+# Layout constants
+LEFT_SIDEBAR_WIDTH = 250
+RIGHT_SIDEBAR_WIDTH = 500
+CANVAS_WIDTH = 450
+TOTAL_WIDTH = LEFT_SIDEBAR_WIDTH + CANVAS_WIDTH + RIGHT_SIDEBAR_WIDTH
+CANVAS_HEIGHT = (TOTAL_WIDTH/16)*9
+
 
 class MainWindow:
     def __init__(self, root):
@@ -23,19 +30,21 @@ class MainWindow:
     def _create_layout(self):
         self.root.configure(bg=UI.WINDOW_BG)
 
-        # Canvas frame
+        # Create canvas frame (don't pack yet)
         canvas_frame = tk.Frame(self.root, bg=UI.WINDOW_BG)
-        canvas_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
 
-        # Environment (tkinter)
+        # Environment (tkinter) - create but don't pack yet
         self.environment = Environment(canvas_frame)
 
-        # Sidebar
-        self._create_sidebar()
+        # Sidebars (pack first so they claim their space)
+        self.createLeftSidebar()
+        self.createRightSidebar()
 
-    def _create_sidebar(self):
-        # Sidebar
-        sidebar = ctk.CTkFrame(self.root, width=250, corner_radius=0, fg_color=UI.SIDEBAR_BG)
+        # Canvas frame (pack last, fills remaining space)
+        canvas_frame.pack(fill=tk.BOTH, expand=True)
+
+    def createLeftSidebar(self):
+        sidebar = ctk.CTkFrame(self.root, width=LEFT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
         sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=0, pady=0)
         sidebar.pack_propagate(False)
 
@@ -105,6 +114,25 @@ class MainWindow:
         )
         self.pause_btn.pack(pady=5, padx=20)
 
+    def createRightSidebar(self):
+        sidebar = ctk.CTkFrame(self.root, width=RIGHT_SIDEBAR_WIDTH, corner_radius=0, fg_color=UI.SIDEBAR_BG)
+        sidebar.pack(side=tk.RIGHT, fill=tk.Y, padx=0, pady=0)
+        sidebar.pack_propagate(False)
+
+        # Reset button
+        reset_btn = ctk.CTkButton(
+            sidebar,
+            text="Reset Arena",
+            command=self.environment.reset_arena,
+            width=210,
+            height=40,
+            corner_radius=20,
+            fg_color=UI.BUTTON_BG,
+            hover_color=UI.BUTTON_HOVER_BG,
+            text_color=UI.BUTTON_TEXT
+        )
+        reset_btn.pack(pady=5, padx=20)
+
     def _toggle_pause(self):
         is_running = self.environment.toggle_pause()
         self.pause_btn.configure(text="Pause" if is_running else "Resume")
@@ -116,7 +144,10 @@ class MainWindow:
 
 def main():
     root = ctk.CTk()  # Use CustomTkinter root
-    root.geometry("950x600")
+    # Calculate window size dynamically from layout constants
+    window_width = LEFT_SIDEBAR_WIDTH + CANVAS_WIDTH + RIGHT_SIDEBAR_WIDTH + 20  # +20 for padding
+    window_height = CANVAS_HEIGHT + 100  # +100 for title bar and padding
+    root.geometry(f"{window_width}x{window_height}")
     app = MainWindow(root)
     root.mainloop()
 
