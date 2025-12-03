@@ -19,6 +19,19 @@ export class MLBridgeService {
   private silentAudio: HTMLAudioElement | null = null; // Silent audio to prevent throttling
   private lastActionTime: number = 0; // Track when we last received an action from Python
 
+  // LATENCY FIX: Action buffering for smooth movement
+  private actionBuffer: number[][] = []; // Buffer of pre-computed actions
+  private currentAction: number[] = [0, 0, 0]; // Current action being applied
+  private readonly ACTION_BUFFER_SIZE = 3; // Keep 3 actions buffered
+
+  // LATENCY FIX: Pipelined mode - don't wait for response before sending next state
+  private usePipelineMode: boolean = true;
+  private pendingStates: number = 0; // Track how many states we've sent without responses
+
+  // LATENCY FIX: Game loop for continuous action application
+  private gameLoopInterval: any = null;
+  private readonly GAME_LOOP_FPS = 60; // Apply actions at 60 FPS
+
   // Observable for connection status
   public connectionStatus$ = new BehaviorSubject<'disconnected' | 'connecting' | 'connected'>('disconnected');
 
@@ -33,6 +46,16 @@ export class MLBridgeService {
 
   // Observable for parallel training information
   public parallelTrainingInfo$ = new BehaviorSubject<{ envCount: number; envId: number } | null>(null);
+
+  // LATENCY FIX: Latency monitoring
+  public latencyStats$ = new BehaviorSubject<{ avg: number; min: number; max: number; bufferSize: number }>({
+    avg: 0,
+    min: 0,
+    max: 0,
+    bufferSize: 0
+  });
+  private latencyMeasurements: number[] = [];
+  private stateSentTime: number = 0;
 
   private WEBSOCKET_URL = 'ws://localhost:8765'; // Python server address (can be overridden by query param)
   private readonly RECONNECT_DELAY = 3000; // 3 seconds
@@ -171,6 +194,12 @@ export class MLBridgeService {
     this.isTraining = true;
     this.trainingStatus$.next(true);
 
+    // LATENCY FIX: Clear buffers
+    this.actionBuffer = [];
+    this.currentAction = [0, 0, 0];
+    this.pendingStates = 0;
+    this.latencyMeasurements = [];
+
     // Acquire wake lock to prevent browser sleep
     await this.acquireWakeLock();
 
@@ -179,6 +208,9 @@ export class MLBridgeService {
 
     // Start keep-alive heartbeat
     this.startKeepAlive();
+
+    // LATENCY FIX: Start game loop for continuous action application
+    this.startGameLoop();
 
     // Connect if not already connected
     if (!this.socket || this.socket.readyState !== WebSocket.OPEN) {
@@ -198,6 +230,13 @@ export class MLBridgeService {
     this.isTraining = false;
     this.trainingStatus$.next(false);
 
+    // LATENCY FIX: Stop game loop
+    this.stopGameLoop();
+
+    // LATENCY FIX: Clear buffers
+    this.actionBuffer = [];
+    this.pendingStates = 0;
+
     // Release wake lock
     this.releaseWakeLock();
 
@@ -208,6 +247,90 @@ export class MLBridgeService {
     this.stopKeepAlive();
   }
 
+  /**
+   * LATENCY FIX: Start game loop for continuous action application
+   */
+  private startGameLoop() {
+    if (this.gameLoopInterval) return;
+
+    console.log(`[ML Bridge] Starting game loop at ${this.GAME_LOOP_FPS} FPS`);
+
+    const frameTime = 1000 / this.GAME_LOOP_FPS;
+
+    this.gameLoopInterval = setInterval(() => {
+      if (this.isTraining && this.actionBuffer.length > 0) {
+        this.applyBufferedAction();
+      }
+    }, frameTime);
+  }
+
+  /**
+   * LATENCY FIX: Stop game loop
+   */
+  private stopGameLoop() {
+    if (this.gameLoopInterval) {
+      clearInterval(this.gameLoopInterval);
+      this.gameLoopInterval = null;
+      console.log('[ML Bridge] Game loop stopped');
+    }
+  }
+
+  /**
+   * LATENCY FIX: Apply next action from buffer and step environment
+   */
+  private applyBufferedAction() {
+    if (this.actionBuffer.length === 0) {
+      // No actions available - robot will continue with last action
+      return;
+    }
+
+    // Get next action from buffer
+    const actionArray = this.actionBuffer.shift()!;
+    this.currentAction = actionArray;
+
+    const action = arrayToAction(actionArray);
+
+    // Take step in environment
+    const result = this.mlEnvironment.step(action);
+
+    // In pipeline mode, send state immediately without waiting
+    if (this.usePipelineMode && this.pendingStates < this.ACTION_BUFFER_SIZE) {
+      this.sendState(result.observation, result.reward, result.done, result.info);
+      this.pendingStates++;
+    } else if (!this.usePipelineMode) {
+      // Original synchronous mode
+      this.sendState(result.observation, result.reward, result.done, result.info);
+    }
+
+    // Update latency stats
+    this.updateLatencyStats();
+  }
+
+  /**
+   * LATENCY FIX: Update latency statistics
+   */
+  private updateLatencyStats() {
+    if (this.latencyMeasurements.length === 0) {
+      this.latencyStats$.next({
+        avg: 0,
+        min: 0,
+        max: 0,
+        bufferSize: this.actionBuffer.length
+      });
+      return;
+    }
+
+    const avg = this.latencyMeasurements.reduce((a, b) => a + b, 0) / this.latencyMeasurements.length;
+    const min = Math.min(...this.latencyMeasurements);
+    const max = Math.max(...this.latencyMeasurements);
+
+    this.latencyStats$.next({
+      avg: Math.round(avg),
+      min: Math.round(min),
+      max: Math.round(max),
+      bufferSize: this.actionBuffer.length
+    });
+  }
 
   /**
    * Send state to Python and wait for action
@@ -217,6 +340,9 @@ export class MLBridgeService {
       console.warn('[ML Bridge] Cannot send state - not connected');
       return;
     }
+
+    // LATENCY FIX: Record time when state is sent
+    this.stateSentTime = performance.now();
 
     const message: BrowserMessage = {
       type: 'state',
@@ -319,6 +445,7 @@ export class MLBridgeService {
 
   /**
    * Handle action from Python
+   * LATENCY FIX: Buffer actions instead of applying immediately
    */
   private handleAction(actionArray: number[]) {
     if (!this.isTraining) {
@@ -329,16 +456,34 @@ export class MLBridgeService {
     // Track action received time
     this.lastActionTime = Date.now();
 
-    console.log('[ML Bridge] Processing action:', actionArray);
-    const action = arrayToAction(actionArray);
+    // LATENCY FIX: Measure latency
+    if (this.stateSentTime > 0) {
+      const latency = performance.now() - this.stateSentTime;
+      this.latencyMeasurements.push(latency);
 
-    // Take step in environment
-    const result = this.mlEnvironment.step(action);
+      // Keep last 100 measurements
+      if (this.latencyMeasurements.length > 100) {
+        this.latencyMeasurements.shift();
+      }
+    }
 
-    // Send result back to Python
-    this.sendState(result.observation, result.reward, result.done, result.info);
+    // LATENCY FIX: Decrement pending states counter
+    if (this.pendingStates > 0) {
+      this.pendingStates--;
+    }
 
-    // If episode done, Python will send reset request
+    // LATENCY FIX: Add action to buffer
+    this.actionBuffer.push(actionArray);
+
+    // Trim buffer if too large
+    if (this.actionBuffer.length > this.ACTION_BUFFER_SIZE) {
+      this.actionBuffer.shift(); // Remove oldest
+    }
+
+    // Log occasionally for debugging
+    if (Math.random() < 0.01) { // 1% of the time
+      console.log(`[ML Bridge] Action buffered. Buffer size: ${this.actionBuffer.length}, Latency: ${this.latencyMeasurements[this.latencyMeasurements.length - 1]?.toFixed(1)}ms`);
+    }
   }
 
   /**
@@ -638,6 +783,7 @@ export class MLBridgeService {
    * Cleanup
    */
   ngOnDestroy() {
+    this.stopGameLoop(); // LATENCY FIX: Stop game loop
     this.releaseWakeLock();
     this.stopSilentAudio();
     this.stopKeepAlive();
