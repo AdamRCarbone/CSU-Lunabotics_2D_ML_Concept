@@ -1,6 +1,6 @@
 """
-PPO Training Continuation Script for Lunar Rover
-Continue training from a saved checkpoint (for models with 30-value observation space)
+PPO Training Script for Lunar Rover
+Automatically continues from latest checkpoint if available, or starts fresh training
 """
 
 import sys
@@ -60,7 +60,7 @@ def find_latest_checkpoint(model_dir="./models", prefix="lunar_rover_ppo"):
 
 def main():
     print("=" * 60)
-    print("Lunar Rover PPO Training - Continue from Checkpoint")
+    print("Lunar Rover PPO Training")
     print("=" * 60)
 
     # Configuration
@@ -89,16 +89,24 @@ def main():
     print("\n[Setup] Searching for latest checkpoint...")
     result = find_latest_checkpoint(MODEL_DIR, MODEL_NAME)
 
+    # Determine if we're continuing or starting fresh
     if result is None:
-        print(f"\n[Error] No checkpoints found in {MODEL_DIR}")
-        print("\nPlease train a model first using train_ppo.py")
-        sys.exit(1)
+        print(f"\n[Info] No checkpoints found in {MODEL_DIR}")
+        print("[Info] Starting fresh training (creating new model)")
+        CHECKPOINT_PATH = None
+        checkpoint_steps = 0
+        LOAD_EXISTING = False
+    else:
+        CHECKPOINT_PATH, checkpoint_steps = result
+        print(f"[Setup] Found latest checkpoint: {os.path.basename(CHECKPOINT_PATH)}")
+        print(f"[Setup] Continuing from {checkpoint_steps:,} steps")
+        LOAD_EXISTING = True
 
-    CHECKPOINT_PATH, checkpoint_steps = result
-    print(f"[Setup] Found latest checkpoint: {os.path.basename(CHECKPOINT_PATH)}")
-    print(f"[Setup] Continuing from {checkpoint_steps:,} steps")
     print(f"[Setup] Will train for {ADDITIONAL_TIMESTEPS:,} additional steps")
-    print(f"[Setup] Final model will have ~{checkpoint_steps + ADDITIONAL_TIMESTEPS:,} steps")
+    if LOAD_EXISTING:
+        print(f"[Setup] Final model will have ~{checkpoint_steps + ADDITIONAL_TIMESTEPS:,} steps")
+    else:
+        print(f"[Setup] Final model will have ~{ADDITIONAL_TIMESTEPS:,} steps")
 
     # Create directories
     os.makedirs(LOG_DIR, exist_ok=True)
@@ -145,10 +153,11 @@ def main():
     print(f"\n[Setup] Setting simulation timescale to {TIMESCALE}x")
     env.envs[0].unwrapped.set_timescale(TIMESCALE)
 
-    # Send checkpoint info to browser UI
-    checkpoint_basename = os.path.basename(CHECKPOINT_PATH)
-    print(f"\n[Setup] Sending checkpoint info to browser UI...")
-    env.envs[0].unwrapped.send_checkpoint_info(checkpoint_basename, checkpoint_steps)
+    # Send checkpoint info to browser UI (if loading existing)
+    if LOAD_EXISTING:
+        checkpoint_basename = os.path.basename(CHECKPOINT_PATH)
+        print(f"\n[Setup] Sending checkpoint info to browser UI...")
+        env.envs[0].unwrapped.send_checkpoint_info(checkpoint_basename, checkpoint_steps)
 
     # Configure max episode steps via the ML environment service
     print(f"[Setup] Configuring max episode steps: {MAX_EPISODE_STEPS}")
@@ -166,24 +175,45 @@ def main():
     asyncio.set_event_loop(loop)
     loop.run_until_complete(send_config())
 
-    # Load existing model
-    print("\n[Model] Loading PPO agent from checkpoint...")
+    # Load existing model or create new one
+    if LOAD_EXISTING:
+        print("\n[Model] Loading PPO agent from checkpoint...")
 
-    try:
-        model = PPO.load(
-            CHECKPOINT_PATH,
-            env=env,
-            device="auto",
+        try:
+            model = PPO.load(
+                CHECKPOINT_PATH,
+                env=env,
+                device="auto",
+                verbose=1,
+                tensorboard_log=LOG_DIR
+            )
+            print("[Model] PPO agent loaded successfully!")
+            print(f"[Model] Using device: {model.device}")
+        except Exception as e:
+            print(f"\n[Error] Failed to load checkpoint: {e}")
+            print("\nMake sure the checkpoint is compatible with the current observation space (30 values).")
+            print("Old checkpoints with 25-value observation space will not work.")
+            sys.exit(1)
+    else:
+        print("\n[Model] Creating new PPO agent...")
+
+        model = PPO(
+            "MlpPolicy",
+            env,
             verbose=1,
-            tensorboard_log=LOG_DIR
+            tensorboard_log=LOG_DIR,
+            learning_rate=3e-4,
+            n_steps=2048,
+            batch_size=64,
+            n_epochs=10,
+            gamma=0.99,
+            gae_lambda=0.95,
+            clip_range=0.2,
+            ent_coef=0.01,
+            device="auto"
         )
-        print("[Model] PPO agent loaded successfully!")
+        print("[Model] PPO agent created successfully!")
         print(f"[Model] Using device: {model.device}")
-    except Exception as e:
-        print(f"\n[Error] Failed to load checkpoint: {e}")
-        print("\nMake sure the checkpoint is compatible with the current observation space (30 values).")
-        print("Old checkpoints with 25-value observation space will not work.")
-        sys.exit(1)
 
     # Callbacks
     checkpoint_callback = CheckpointCallback(
@@ -192,9 +222,12 @@ def main():
         name_prefix=MODEL_NAME
     )
 
-    # Continue training
+    # Start training
     print("\n" + "=" * 60)
-    print(f"Continuing training for {ADDITIONAL_TIMESTEPS} additional timesteps")
+    if LOAD_EXISTING:
+        print(f"Continuing training for {ADDITIONAL_TIMESTEPS:,} additional timesteps")
+    else:
+        print(f"Starting training for {ADDITIONAL_TIMESTEPS:,} timesteps")
     print("=" * 60)
     print()
 
@@ -203,7 +236,7 @@ def main():
             total_timesteps=ADDITIONAL_TIMESTEPS,
             callback=checkpoint_callback,
             progress_bar=True,
-            reset_num_timesteps=False  # Don't reset timestep counter
+            reset_num_timesteps=(not LOAD_EXISTING)  # Reset counter only for new models
         )
 
         # Save final model
