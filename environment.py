@@ -2,6 +2,7 @@ import random
 import tkinter as tk
 from shapes import Zone, Rover, Boulder, Crater, ARENA_WIDTH, ARENA_HEIGHT, SCALE
 from styles import Sim
+from zone_enum import ZoneType
 
 
 class Environment:
@@ -19,6 +20,8 @@ class Environment:
         self.rover = None
         self.keys_pressed = []
         self.running = True
+        self.current_zone = ZoneType.NONE
+        self.dig_mode = False
 
         # Setup
         self._create_zones()
@@ -81,6 +84,33 @@ class Environment:
             self.rover.delete()
         self.rover = Rover(self.canvas)
 
+    def get_rover_position(self):
+        """Get rover center position in meters"""
+        if not self.rover:
+            return (0, 0)
+        return (self.rover._x, self.rover._y)
+
+    def detect_current_zone(self):
+        """Detect which zone the rover is currently in"""
+        if not self.rover:
+            return ZoneType.NONE
+
+        rover_center = (self.rover._x, self.rover._y)
+
+        # Check zones in priority order (smaller/specific zones first)
+        if self.column.contains(rover_center):
+            return ZoneType.COLUMN
+        elif self.construction_zone.contains(rover_center):
+            return ZoneType.CONSTRUCTION
+        elif self.start_zone.contains(rover_center):
+            return ZoneType.STARTING
+        elif self.excavation_zone.contains(rover_center):
+            return ZoneType.EXCAVATION
+        elif self.obstacle_zone.contains(rover_center):
+            return ZoneType.OBSTACLE
+        else:
+            return ZoneType.NONE
+
     def update(self):
         if not self.running:
             return
@@ -95,9 +125,15 @@ class Environment:
                 self.rover.torque_left(5)
             elif key == 'e':
                 self.rover.torque_left(-5)
+            elif key == 'b' or key == 'B':
+                # Toggle dig mode
+                self.dig_mode = not self.dig_mode
 
         # Update physics
         self.rover.update()
+
+        # Update current zone
+        self.current_zone = self.detect_current_zone()
 
         # Check for collision
         collision = False

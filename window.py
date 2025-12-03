@@ -22,9 +22,9 @@ class LayoutConfig:
         self.WINDOW_WIDTH_RATIO = .90  # 90% of screen width
         self.WINDOW_HEIGHT_RATIO = .90  # 90% of screen height
 
-        self.ENVIRONMENT_WIDTH_RATIO = 0.50 
-        self.LEFT_SIDEBAR_WIDTH_RATIO = 0.125 
-        self.RIGHT_SIDEBAR_WIDTH_RATIO = 0.125
+        self.ENVIRONMENT_WIDTH_RATIO = 0.40
+        self.LEFT_SIDEBAR_WIDTH_RATIO = 0.18
+        self.RIGHT_SIDEBAR_WIDTH_RATIO = 0.25
 
         # Calculate target window dimensions
         self.target_window_width = int(self.SCREEN_WIDTH * self.WINDOW_WIDTH_RATIO)
