@@ -32,9 +32,9 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public physicsEngine!: PhysicsEngine;
   app = inject(App);
 
-  // REAL-WORLD UNITS (METERS)
-  public environment_width_meters: number = 6.8;
-  public environment_height_meters: number = 5;
+  // REAL-WORLD UNITS (METERS) — defaults to KSC; updated by arena selector
+  public environment_width_meters: number = 6.88;
+  public environment_height_meters: number = 5.0;
   public rover_start_x_meters: number = 0.5; // meters from left edge
   public rover_start_y_meters: number = 0.5; // meters from bottom edge
   public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)

@@ -1,0 +1,102 @@
+arenas:
+
+  ksc:
+    # KSC Artemis 2026 — left-column excavation, bottom-right deposit, bottom-left start
+    base_width:  6.88
+    base_length: 5.0
+    excavation_width_frac: 0.363   # 2.5 / 6.88  (left column)
+    start_length_frac:     0.400   # 2.0 / 5.0   (start zone height, bottom-left)
+    deposit_length_frac:   0.300   # 1.5 / 5.0   (deposit zone height, bottom-right)
+    berm_w: 1.7
+    berm_h: 0.8
+    column_size: 0.4
+    rocks_mean:      3
+    craters_mean:    2
+    rock_diameter:   0.35
+    crater_diameter: 0.45
+    obstacle_spread: 1.6
+
+  ucf:
+    # UCF Practice Arena 2026 — upper-left excavation, bottom-left deposit, top-right start
+    base_width:  8.10
+    base_length: 4.57
+    construction_w_frac: 0.321   # 2.6 / 8.10  (bottom-left construction zone width)
+    construction_h_frac: 0.438   # 2.0 / 4.57  (construction zone height)
+    excavation_w_frac:   0.494   # 4.0 / 8.10  (upper-left excavation zone width)
+    start_w_frac:        0.247   # 2.0 / 8.10  (start zone width, from right edge)
+    start_h_frac:        0.438   # 2.0 / 4.57  (start zone height, from top edge)
+    berm_w: 1.5
+    berm_h: 0.9
+    column_size: 0.0
+    rocks_mean:      3
+    craters_mean:    2
+    rock_diameter:   0.35
+    crater_diameter: 0.45
+    obstacle_spread: 1.6
+
+terrain:
+  grid_size: 80
+  cell_size:  0.05
+  view_width: 4.0
+  view_height: 4.0
+  height_noise_std: 0.04
+  height_scale: 0.5
+
+planner:
+  slope_weight:  2.0
+  crater_weight: 8.0
+  rock_weight:   6.0
+  wall_weight:   50.0
+  lookahead: 8
+  slow_radius:   1.0
+  slow_min:      0.35
+
+robot:
+  v_max:           0.652
+  wheel_base:      0.483
+  diff_limit:      0.8
+  robot_width:     0.75
+  robot_length:    1.5
+  projection_time: 22.0
+  nav_speed_limit:   0.40
+  nav_speed_nominal: 0.28
+  digging_speed:  0.12
+  digging_steps:  38
+  dumping_steps:  27
+  robot_half_width: 0.375
+  danger_distance:  0.55
+  recovery_steps:   8
+
+model:
+  cnn_channels: [64, 128, 256]   # 3-block CNN, ~0.5 M params
+  fc_dims: [256, 128]
+  heading_embed_dim: 16
+  arena_embed_dim: 8
+  zone_embed_dim: 8
+  phase_embed_dim: 8
+  seq_len: 16                    # steps simulated per training episode
+
+training:
+  epochs: 100
+  batch_size: 64
+  learning_rate: 3.0e-4
+  weight_decay: 1.0e-4
+  val_ratio: 0.1
+  seed: 42
+  num_workers: -1
+  arenas_per_epoch: 500
+  samples_per_arena: 20
+  scale_min: 1.0
+  scale_max: 1.0
+  grad_clip: 1.0
+  early_stop_patience: 20
+  bucket_loss_weight: 0.50
+  loss_display_scale: 100
+  arena_mix_ucf: 0.5
+  sim_dt: 0.10
+  dart_prob: 0.25    # fraction of episodes with positional perturbation
+  dart_std:  0.25    # metres of Gaussian noise
+
+checkpoints:
+  dir: "checkpoints"
+  keep: 10
