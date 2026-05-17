@@ -6,16 +6,16 @@ import { WindowSizeService } from './services/window-size';
 import { UniversalSliderComponent } from './Components/universal_slider/universal-slider';
 import { ParameterDisplay, Parameter } from "./Components/parameter_display/parameter-display";
 import { ZoneLegend } from './Components/zone-legend/zone-legend';
-import { DetectedObstacles } from './Components/detected-obstacles/detected-obstacles';
-import { DetectedDiggableComponent } from './Components/detected-diggable/detected-diggable';
 import { Zone } from './enums/zone.enum';
 import { ResetTrigger } from './services/reset-trigger';
 import { Subscription } from 'rxjs';
+import { CommonModule } from '@angular/common';
+import { CollidableObject } from './Components/collidable-object/collidable-object';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, DetectedObstacles, DetectedDiggableComponent],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, CommonModule],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
@@ -25,20 +25,30 @@ export class App implements AfterViewInit, OnDestroy {
   title = 'ml-navigation';
   public window_width = window.innerWidth;
   public window_height = window.innerHeight;
-  public grid_size = 100;
-  public cell_size = this.window_height / this.grid_size;
-  public speedValue: number = 0;
-  public rotationValue: number = 0;
+
+  // Differential drive motor values (slider-commanded)
+  public leftMotorValue: number = 0;
+  public rightMotorValue: number = 0;
+
+  // Speed multiplier: 100 = 0.2 m/s nominal, range 0–500%
+  public speedMultiplierPercent: number = 100;
+
+  // Actual motor values (read from rover, shown in display bars)
+  public leftMotorActual: number = 0;
+  public rightMotorActual: number = 0;
+
   public positionParams: Parameter[] = [
     { name: 'x', value: '—' },
     { name: 'y', value: '—' }
   ];
   public positionParams_sigfig: number = 3;
   public currentZone: Zone = Zone.NONE;
-  public digMode: boolean = false;
-  public digModeParams: Parameter[] = [
-    { name: 'Mode', value: 'OFF' }
-  ];
+
+  // Bucket state: 0=UP (travel), 1=COLLECT (digging), 2=DUMP
+  public bucketState: number = 0;
+  public bucketParams: Parameter[] = [{ name: 'Bucket', value: 'UP' }];
+  private readonly BUCKET_LABELS = ['UP', 'COLLECT', 'DUMP'];
+
   private resetSubscription?: Subscription;
 
   constructor(
@@ -50,38 +60,13 @@ export class App implements AfterViewInit, OnDestroy {
     this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 
-  scaleRoverPosition(Axis: string, Coordinate: number): string {
-    const environment_height = this.environment.environment_height_px;
-    const environment_width = this.environment.environment_width_px;
-    const x_width_meters = this.environment.environment_width_meters;
-    const y_height_meters = this.environment.environment_height_meters;
-
-    let scaledCoordinate: number;
-
-    if (Axis === 'x') {
-      // Convert pixel coordinate to meters (0 to x_width_meters)
-      scaledCoordinate = (Coordinate / environment_width) * x_width_meters;
-    } else if (Axis === 'y') {
-      // Invert y-axis (canvas y=0 is top, we want y=0 at bottom)
-      // Then convert to meters (0 to y_height_meters)
-      scaledCoordinate = ((environment_height - Coordinate) / environment_height) * y_height_meters;
-    } else {
-      return '0';
-    }
-
-    return scaledCoordinate.toFixed(this.positionParams_sigfig);
-  }
-
   getRoverPositionMeters(axis: 'x' | 'y'): string {
     if (!this.environment?.physicsEngine) return '—';
-
     const state = this.environment.physicsEngine.getRoverState();
     if (!state) return '—';
-
-    const value = axis === 'x' ?
-      this.environment.pixelsToMeters(state.x) :
-      this.environment.environment_height_meters - this.environment.pixelsToMeters(state.y);
-
+    const value = axis === 'x'
+      ? this.environment.pixelsToMeters(state.x)
+      : this.environment.environment_height_meters - this.environment.pixelsToMeters(state.y);
     return value.toFixed(this.positionParams_sigfig);
   }
 
@@ -92,42 +77,60 @@ export class App implements AfterViewInit, OnDestroy {
     ];
   }
 
-  get detectedObstacles() {
-    return this.environment?.frustum?.detectedCollidableObjects || [];
+  /** Groups of obstacles for the sensor inputs panel. */
+  get sensorGroups(): { type: string; items: CollidableObject[] }[] {
+    const all = this.environment?.obstacleField?.collidableObjects || [];
+    const rocks    = all.filter(o => o.name.startsWith('Rock'));
+    const craters  = all.filter(o => o.name.startsWith('Crater'));
+    const boundary = all.filter(o => ['Wall_N','Wall_S','Wall_E','Wall_W'].includes(o.name));
+    return [
+      { type: 'Rocks',    items: rocks    },
+      { type: 'Craters',  items: craters  },
+      { type: 'Boundary', items: boundary },
+    ].filter(g => g.items.length > 0);
   }
 
-  get detectedDiggables() {
-    return this.environment?.frustum?.detectedDiggableObjects || [];
+  public hexToRgb(hex: string): { r: number; g: number; b: number } | null {
+    hex = hex.replace(/^#/, '');
+    if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) return null;
+    return {
+      r: parseInt(hex.substring(0, 2), 16),
+      g: parseInt(hex.substring(2, 4), 16),
+      b: parseInt(hex.substring(4, 6), 16),
+    };
   }
+
+  public randomInRange(min: number, max: number): number {
+    return min + Math.random() * (max - min);
+  }
+
+  /** Returns bar fill width (0–50%) for a motor value in [-1, 1]. */
+  motorBarWidth(v: number): number { return Math.abs(v) * 50; }
+  motorBarForward(v: number): boolean { return v >= 0; }
 
   ngAfterViewInit() {
     this.updateRoverPosition();
+    this.resetBucket();
 
-    // Reset dig mode to OFF on initialization
-    this.resetDigMode();
-
-    // Subscribe to reset trigger to turn off dig mode on collision reset
     this.resetSubscription = this.resetTrigger.reset$.subscribe(() => {
-      this.resetDigMode();
+      this.resetBucket();
     });
 
     this.ngZone.runOutsideAngular(() => {
       setInterval(() => {
         if (this.environment) {
           this.ngZone.run(() => {
-            const newRotation = this.environment.roverCurrentHeading;
-            const newSpeed = this.environment.roverCurrentSpeed;
+            const newLeft  = this.environment.roverCurrentLeftMotor;
+            const newRight = this.environment.roverCurrentRightMotor;
 
-            if (Math.abs(this.rotationValue - newRotation) > 0.01 ||
-                Math.abs(this.speedValue - newSpeed) > 0.01) {
-              this.rotationValue = newRotation;
-              this.speedValue = newSpeed;
+            if (Math.abs(this.leftMotorActual  - newLeft)  > 0.005 ||
+                Math.abs(this.rightMotorActual - newRight) > 0.005) {
+              this.leftMotorActual  = newLeft;
+              this.rightMotorActual = newRight;
             }
 
-            // Update position parameters
             if (this.environment.rover) {
               this.updateRoverPosition();
-              // Update current zone
               this.currentZone = this.environment.currentZone;
               this.cdr.markForCheck();
             }
@@ -138,39 +141,15 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy() {
-    if (this.resetSubscription) {
-      this.resetSubscription.unsubscribe();
+    this.resetSubscription?.unsubscribe();
+  }
+
+  resetBucket() {
+    this.bucketState = 0;
+    this.bucketParams = [{ name: 'Bucket', value: 'UP' }];
+    if (this.environment?.diggingField) {
+      this.environment.diggingField.setDigMode(false);
     }
-  }
-
-  hexToRgb(hex: string): { r: number; g: number; b: number } | null {
-  // Remove the leading # if present
-  hex = hex.replace(/^#/, '');
-
-  // Check if it's a valid 6-character hex string
-  if (hex.length !== 6 || !/^[0-9A-Fa-f]{6}$/.test(hex)) {
-    return null; // Invalid hex, return null or throw an error as needed
-  }
-
-  // Parse the r, g, b components
-  const r = parseInt(hex.substring(0, 2), 16);
-  const g = parseInt(hex.substring(2, 4), 16);
-  const b = parseInt(hex.substring(4, 6), 16);
-
-  return { r, g, b };
-}
-
-  // Generate random number in range
-  public randomInRange(min: number, max: number): number {
-    return min + Math.random() * (max - min);
-  }
-
-  @HostListener('window:resize', ['$event'])
-  onResize(event: Event) {
-    this.window_width = window.innerWidth;
-    this.window_height = window.innerHeight;
-    this.cell_size = this.window_height / this.grid_size;
-    this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 
   private lastKeyPressTime: number = 0;
@@ -178,58 +157,29 @@ export class App implements AfterViewInit, OnDestroy {
   @HostListener('window:keydown', ['$event'])
   onKeyDown(event: KeyboardEvent) {
     if (event.key === 'b' || event.key === 'B') {
-      // Debounce to prevent rapid toggling
       const now = Date.now();
-      if (now - this.lastKeyPressTime < 200) return; // Ignore if pressed within 200ms
+      if (now - this.lastKeyPressTime < 200) return;
       this.lastKeyPressTime = now;
-
-      this.toggleDigMode();
+      this.cycleBucket();
     }
   }
 
-  resetDigMode() {
-    this.digMode = false;
-    this.digModeParams = [
-      { name: 'Mode', value: 'OFF' }
-    ];
-
-    // Update physics bodies for all diggable objects
-    if (this.environment?.diggingField) {
-      this.environment.diggingField.setDigMode(false);
-    }
-  }
-
-  toggleDigMode() {
+  cycleBucket() {
     if (!this.environment?.diggingField) return;
+    this.bucketState = (this.bucketState + 1) % 3;
+    this.bucketParams = [{ name: 'Bucket', value: this.BUCKET_LABELS[this.bucketState] }];
 
-    // If trying to turn ON (grab)
-    if (!this.digMode) {
-      // Only allow if orbs are in grab zone AND no orbs currently grabbed
-      const canGrab = this.environment.diggingField.canGrab();
-      const hasGrabbed = this.environment.diggingField.hasGrabbedOrbs();
-
-      if (!canGrab) {
-        console.log('No orbs in grab zone - cannot grab');
-        return;
-      }
-
-      if (hasGrabbed) {
-        console.log('Already holding orbs - release first');
-        return;
-      }
-
-      // Perform grab
-      this.digMode = true;
+    if (this.bucketState === 1) {
       this.environment.diggingField.setDigMode(true);
     } else {
-      // Turn OFF (release)
-      this.digMode = false;
       this.environment.diggingField.setDigMode(false);
     }
+  }
 
-    // Update UI
-    this.digModeParams = [
-      { name: 'Mode', value: this.digMode ? 'ON' : 'OFF' }
-    ];
+  @HostListener('window:resize', ['$event'])
+  onResize(event: Event) {
+    this.window_width = window.innerWidth;
+    this.window_height = window.innerHeight;
+    this.windowSizeService.updateWindowSize(this.window_width, this.window_height);
   }
 }

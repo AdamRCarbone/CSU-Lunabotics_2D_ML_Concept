@@ -37,8 +37,14 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   public environment_height_meters: number = 5.0;
   public rover_start_x_meters: number = 0.5; // meters from left edge
   public rover_start_y_meters: number = 0.5; // meters from bottom edge
-  public rover_length_meters: number = 1.5; // rover length/height in meters (y-axis)
+  public rover_length_meters: number = 1.0; // rover body length in meters (not including bucket)
+  public rover_width_meters:  number = 0.6; // rover body width
   public rover_start_rotation: number = 0; // initial rotation in degrees
+
+  // Wall band — visible arena boundary, also fed to AI as sensor input
+  public wallBand_meters: number = 0.3;
+  public wallPanel_meters: number = 0.07; // thin wall panel thickness (matches deleted barrier style)
+  get wallBand_px(): number { return this.metersToPixels(this.wallBand_meters); }
 
   // PIXEL-BASED PROPERTIES (RENDERING)
   public environment_width_px!: number;
@@ -61,24 +67,20 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
   @ViewChild('diggingField', { static: true }) diggingField!: DiggingField;
   @ViewChild('frustum', { static: true }) frustum!: Frustum;
 
-  @Input() set roverSpeedMultiplier(value: number) {
-    if (this.rover) {
-      this.rover.speedMultiplier = value;
-    }
+  @Input() set roverLeftMotor(value: number) {
+    if (this.rover) this.rover.leftMotor = value;
   }
 
-  @Input() set roverTargetHeading(value: number) {
-    if (this.rover) {
-      this.rover.targetHeading = value;
-    }
+  @Input() set roverRightMotor(value: number) {
+    if (this.rover) this.rover.rightMotor = value;
   }
 
-  get roverCurrentHeading(): number {
-    return this.rover ? this.rover.currentHeading : 0;
+  get roverCurrentLeftMotor(): number {
+    return this.rover?.leftMotor ?? 0;
   }
 
-  get roverCurrentSpeed(): number {
-    return this.rover ? this.rover.currentSpeed : 0;
+  get roverCurrentRightMotor(): number {
+    return this.rover?.rightMotor ?? 0;
   }
 
   get currentZone(): Zone {
@@ -143,104 +145,94 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
     this.windowSizeSubscription = this.windowSizeService.windowSize$.subscribe(({ height }) => {
 
       // Calculate pixel dimensions from meters
+      this.environment_width_px = (height * this.environment_width_meters / this.xy_scale_factor);
+      this.environment_height_px = (height * this.environment_height_meters / this.xy_scale_factor);
       this.cell_size_px = this.environment_height_px / this.grid_size;
       this.environment_border_radius_px = this.cell_size_px;
       this.environment_stroke_weight_px = this.cell_size_px / 2;
-
-      this.environment_width_px = (height * this.environment_width_meters / this.xy_scale_factor);
-      this.environment_height_px = (height * this.environment_height_meters / this.xy_scale_factor);
 
       // Convert meter-based starting position to pixel coordinates
       this.rover_start_x_px = (this.rover_start_x_meters / this.environment_width_meters) * this.environment_width_px;
       this.rover_start_y_px = this.environment_height_px - ((this.rover_start_y_meters / this.environment_height_meters) * this.environment_height_px);
 
-      // Resize the p5.js canvas (add extra space for stroke)
       if (this.p5Instance) {
-        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px;
-        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px;
-        this.p5Instance.resizeCanvas(canvasWidth, canvasHeight);
+        const wb = this.wallBand_px;
+        this.p5Instance.resizeCanvas(
+          this.environment_width_px  + 2 * wb + 8,
+          this.environment_height_px + 2 * wb + 8
+        );
       }
     });
 
     // Initialize p5.js
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
-        const canvasWidth = this.environment_width_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
-        const canvasHeight = this.environment_height_px + this.environment_stroke_weight_px + this.environment_stroke_weight_px;
+        const wb = this.wallBand_px;
+        const canvasWidth  = this.environment_width_px  + 2 * wb + 8;
+        const canvasHeight = this.environment_height_px + 2 * wb + 8;
         const canvas = p.createCanvas(canvasWidth, canvasHeight);
         canvas.parent(this.canvasContainer.nativeElement);
         p.angleMode(p.DEGREES);
       };
 
       p.draw = () => {
-        const sw = this.environment_stroke_weight_px;
-        const strokeOffset = sw / 2;
+        const wb   = this.wallBand_px;
+        const wpx  = this.metersToPixels(this.wallPanel_meters); // thin wall panel px
+        const pad  = 4; // outer border gap
+        const ax   = wb + pad; // arena top-left in canvas
+        const ay   = wb + pad;
+        const aw   = this.environment_width_px;
+        const ah   = this.environment_height_px;
+        const cw   = aw + 2 * wb + 8;
+        const ch   = ah + 2 * wb + 8;
 
-        // Clear background
-        p.background(255);
+        // Page background colour so rounded corners blend in (matches #f0f0f2)
+        p.background(240, 240, 242);
 
-        // Use erase mode to create clipping by drawing everything to background,
-        // then using blend mode to composite only inside the rounded rect
         p.push();
 
-        // Draw environment background with stroke
-        p.fill(220);
-        p.stroke(150);
-        p.strokeWeight(sw);
-        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+        // White card + thick rounded border matching zone border weight
+        p.fill(255);
+        p.stroke(170, 170, 180);
+        p.strokeWeight(4);
+        p.rect(2, 2, cw - 4, ch - 4, 14);
 
-        // Create a clipping region using drawingContext (raw canvas API)
+        // Arena background
+        p.fill(220);
+        p.noStroke();
+        p.rect(ax, ay, aw, ah);
+
+        // Clip to arena, translate so all components use arena-local coords (0,0)
         const ctx = (p as any).drawingContext as CanvasRenderingContext2D;
         ctx.save();
         ctx.beginPath();
-
-        // Create rounded rectangle path manually
-        const x = strokeOffset;
-        const y = strokeOffset;
-        const w = this.environment_width_px;
-        const h = this.environment_height_px;
-        const r = this.environment_border_radius_px;
-
-        ctx.moveTo(x + r, y);
-        ctx.lineTo(x + w - r, y);
-        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-        ctx.lineTo(x + w, y + h - r);
-        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-        ctx.lineTo(x + r, y + h);
-        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-        ctx.lineTo(x, y + r);
-        ctx.quadraticCurveTo(x, y, x + r, y);
-        ctx.closePath();
+        ctx.rect(ax, ay, aw, ah);
         ctx.clip();
+        ctx.translate(ax, ay);
 
-        // Update physics engine
         this.physicsEngine.update();
+        this.zoneDisplay.update(p);
+        this.zoneDisplay.draw(p);
+        this.obstacleField.update(p);
+        this.obstacleField.draw(p);
+        this.diggingField.update();
+        this.diggingField.draw(p);
+        this.frustum.draw(p);
+        this.rover.update(p);
+        this.rover.draw(p);
 
-        this.zoneDisplay.update(p);    // Update zone display
-        this.zoneDisplay.draw(p);      // Render zone display
+        ctx.restore();
 
-        this.obstacleField.update(p);  // Update obstacle field
-        this.obstacleField.draw(p);    // Render obstacles
-
-        this.diggingField.update();    // Update digging field
-        this.diggingField.draw(p);     // Render diggable orbs
-
-        this.frustum.update(p);        // Update frustum
-        this.frustum.draw(p);          // Render frustum (before rover so it's behind)
-
-        this.rover.update(p);          // Update rover
-        this.rover.draw(p);            // Render rover
-
-        ctx.restore(); // End clipping
-
-        // Redraw border on top
-        p.noFill();
-        p.stroke(150);
-        p.strokeWeight(sw);
-        p.rect(strokeOffset, strokeOffset, this.environment_width_px, this.environment_height_px, this.environment_border_radius_px);
+        // 4 thin red wall panels flush against arena edges (same style as deleted barriers)
+        p.fill(210, 40, 40, 220);
+        p.stroke(160, 20, 20, 255);
+        p.strokeWeight(2);
+        p.rect(ax,        ay - wpx, aw,  wpx, 3); // N
+        p.rect(ax,        ay + ah,  aw,  wpx, 3); // S
+        p.rect(ax - wpx,  ay,       wpx, ah,  3); // W
+        p.rect(ax + aw,   ay,       wpx, ah,  3); // E
 
         p.pop();
-
       };
 
       p.keyPressed = (event: KeyboardEvent) => {

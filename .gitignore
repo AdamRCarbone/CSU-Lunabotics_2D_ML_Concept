@@ -1,0 +1,13 @@
+# Local Node.js install (not committed — install per-machine)
+.node/
+
+# Python
+__pycache__/
+*.py[cod]
+training_nav/checkpoints/
+training_nav/__pycache__/
+
+# Angular
+webapp/ml-navigation/node_modules/
+webapp/ml-navigation/dist/
+webapp/ml-navigation/.angular/

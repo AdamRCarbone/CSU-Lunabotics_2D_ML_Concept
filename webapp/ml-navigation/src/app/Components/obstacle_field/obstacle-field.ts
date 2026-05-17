@@ -27,19 +27,13 @@ export class ObstacleField implements OnInit, OnDestroy {
   public collidableObjects: CollidableObject[] = [];
 
   // Obstacle generation settings
-  public numRocks: number = 7;           // Number of rocks to generate
-  public numCraters: number = 4;         // Number of craters to generate
-  public rockMinRadius: number = 0.15;   // Min radius for rocks (0.3m diameter)
-  public rockMaxRadius: number = 0.2;    // Max radius for rocks (0.4m diameter)
-  public craterMinRadius: number = 0.15; // Min radius for craters (0.3m diameter)
-  public craterMaxRadius: number = 0.25; // Max radius for craters (0.5m diameter)
-  public minSpacing: number = 0.666;       // Min spacing between obstacles (meters) - allows rover to pass
-
-  // Zone dimensions from zone-display (for determining allowed zones)
-  private startingZone_width_meters: number = 2;
-  private startingZone_height_meters: number = 2;
-  private constructionZone_width_meters: number = 3;
-  private constructionZone_height_meters: number = 1.5;
+  public numRocks: number = 7;
+  public numCraters: number = 4;
+  public rockMinRadius: number = 0.075; // OCTANE terrain_collection_env_cfg: 0.15–0.60m diameter
+  public rockMaxRadius: number = 0.30;
+  public craterMinRadius: number = 0.20; // OCTANE terrain_collection_env_cfg: 0.40–1.50m diameter
+  public craterMaxRadius: number = 0.75;
+  get minSpacing(): number { return this.environment.rover_width_meters; }
 
   ngOnInit() {
     // Initialize obstacles
@@ -106,6 +100,23 @@ export class ObstacleField implements OnInit, OnDestroy {
         this.collidableObjects.push(crater);
       }
     }
+
+    // Arena boundary walls — thin panels at arena edge, also provided as AI sensor inputs
+    const t  = this.environment.wallPanel_meters;
+    const ew = this.environment.environment_width_meters;
+    const eh = this.environment.environment_height_meters;
+    [
+      { name: 'Wall_N', x: ew / 2,     y: eh + t / 2, w: ew, h: t },
+      { name: 'Wall_S', x: ew / 2,     y: -t / 2,     w: ew, h: t },
+      { name: 'Wall_W', x: -t / 2,     y: eh / 2,     w: t,  h: eh },
+      { name: 'Wall_E', x: ew + t / 2, y: eh / 2,     w: t,  h: eh },
+    ].forEach(b => this.collidableObjects.push(new CollidableObject({
+      x_meters: b.x, y_meters: b.y,
+      shape: CollisionShape.RECTANGLE,
+      width_meters: b.w, height_meters: b.h,
+      color: '#d22828', name: b.name,
+    })));
+
   }
 
   // Find position for an obstacle (no overlap with existing) within excavation or obstacle zones
@@ -131,27 +142,19 @@ export class ObstacleField implements OnInit, OnDestroy {
     return null; // Failed to find valid position
   }
 
-  // Check if position is in excavation or obstacle zones (no start or construction zones)
   private isInAllowedZone(x: number, y: number): boolean {
-    // Starting zone: bottom-left, 2x2m
-    const inStartingZone = x < this.startingZone_width_meters &&
-                          y < this.startingZone_height_meters;
+    const al = this.environment.zoneDisplay?.arenaLayout;
+    if (!al) return true;
 
-    // Construction zone: bottom-right, 3m wide x 1.5m tall
-    const constructionZoneLeft = this.environment.environment_width_meters - this.constructionZone_width_meters;
-    const inConstructionZone = x > constructionZoneLeft &&
-                               y < this.constructionZone_height_meters;
+    const inRect = (px: number, py: number, z: { x: number; y: number; w: number; h: number }, pad = 0.3) =>
+      px >= z.x - pad && px <= z.x + z.w + pad &&
+      py >= z.y - pad && py <= z.y + z.h + pad;
 
-    // Column post area: center of environment (0.75m x 0.75m)
-    const columnHalfWidth = 0.375;
-    const columnHalfHeight = 0.375;
-    const centerX = this.environment.environment_width_meters / 2;
-    const centerY = this.environment.environment_height_meters / 2;
-    const inColumnZone = Math.abs(x - centerX) < (columnHalfWidth + 0.5) &&
-                        Math.abs(y - centerY) < (columnHalfHeight + 0.5);
-
-    // Allow if NOT in starting, construction, or column zones
-    return !inStartingZone && !inConstructionZone && !inColumnZone;
+    if (inRect(x, y, al.start)) return false;
+    if (inRect(x, y, al.deposit)) return false;
+    if (inRect(x, y, al.berm, 0.5)) return false;
+    if (al.column && inRect(x, y, al.column, 0.5)) return false;
+    return true;
   }
 
   // Check if a position overlaps with existing collidable objects
@@ -181,24 +184,27 @@ export class ObstacleField implements OnInit, OnDestroy {
   }
 
   draw(p: p5) {
-    // Draw all obstacles (rocks and craters)
     for (const obj of this.collidableObjects) {
-      if (!obj.isCircular() || !obj.radius_meters) continue;
-
       const color = obj.color || '#000000';
       const rgb = this.app.hexToRgb(color) ?? { r: 0, g: 0, b: 0 };
-
-      // Convert meters to pixels
       const x_px = this.environment.metersToPixels(obj.x_meters);
-      const y_px = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters); // Flip Y
-      const radius_px = this.environment.metersToPixels(obj.radius_meters);
+      const y_px = this.environment.environment_height_px - this.environment.metersToPixels(obj.y_meters);
 
-      // Draw circle
       p.push();
       p.stroke(rgb.r, rgb.g, rgb.b, 255);
-      p.fill(rgb.r, rgb.g, rgb.b, 255);
       p.strokeWeight(2);
-      p.circle(x_px, y_px, radius_px * 2); // p5.js circle uses diameter
+
+      if (obj.isCircular() && obj.radius_meters) {
+        const r_px = this.environment.metersToPixels(obj.radius_meters);
+        p.fill(rgb.r, rgb.g, rgb.b, 255);
+        p.circle(x_px, y_px, r_px * 2);
+      } else if (obj.isRectangular() && obj.width_meters && obj.height_meters) {
+        const w_px = this.environment.metersToPixels(obj.width_meters);
+        const h_px = this.environment.metersToPixels(obj.height_meters);
+        p.fill(rgb.r, rgb.g, rgb.b, 220);
+        p.rect(x_px - w_px / 2, y_px - h_px / 2, w_px, h_px, 3);
+      }
+
       p.pop();
     }
   }

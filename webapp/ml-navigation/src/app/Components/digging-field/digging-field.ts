@@ -84,46 +84,89 @@ export class DiggingField implements OnInit, OnDestroy {
     }
   }
 
-  // Generate random regolith orbs in excavation zone (and starting zone)
   private generateDiggables() {
-    // Clear existing physics bodies
     if (this.environment.physicsEngine) {
       this.environment.physicsEngine.clearDiggables();
     }
-
     this.diggableObjects = [];
-    const maxAttempts = 100; // Max attempts per orb to find valid position
 
-    // Generate regolith orbs
-    for (let i = 0; i < this.numOrbs; i++) {
-      const position = this.findValidPosition(this.orbRadius, maxAttempts);
+    const al = this.environment.zoneDisplay?.arenaLayout;
+    const exW = al ? al.excavation.w : (this.environment.zoneDisplay?.excavationZone_width_meters ?? 2.5);
+    const exH = this.environment.environment_height_meters;
 
-      if (position) {
-        const orb = new DiggableObject({
-          x_meters: position.x,
-          y_meters: position.y,
-          radius_meters: this.orbRadius,
-          color: '#8B4513', // Brown color
-          name: `Regolith_${i}`
-        });
+    // Pick 3 cluster centers in the excavation zone, well spaced from each other
+    const numClusters = 3;
+    const clusterR = 0.35;
+    const centers: { x: number; y: number }[] = [];
 
-        // Create physics body for the orb (convert meters to pixels)
-        if (this.environment.physicsEngine) {
-          const x_px = this.environment.metersToPixels(position.x);
-          const y_px = this.environment.environment_height_px - this.environment.metersToPixels(position.y);
-          const radius_px = this.environment.metersToPixels(this.orbRadius);
+    for (let c = 0; c < numClusters; c++) {
+      for (let attempt = 0; attempt < 80; attempt++) {
+        const cx = this.app.randomInRange(clusterR + 0.2, exW - clusterR - 0.2);
+        const cy = this.app.randomInRange(clusterR + 0.3, exH - clusterR - 0.3);
 
-          orb.physicsBody = this.environment.physicsEngine.addDiggable(
-            x_px,
-            y_px,
-            radius_px,
-            `Regolith_${i}`
-          );
-        }
+        if (centers.some(cc => Math.hypot(cx - cc.x, cy - cc.y) < clusterR * 3 + 0.4)) continue;
 
-        this.diggableObjects.push(orb);
+        const nearObs = this.environment.obstacleField?.collidableObjects.some(obs => {
+          const r = obs.radius_meters ?? Math.max(obs.width_meters ?? 0, obs.height_meters ?? 0) / 2;
+          return Math.hypot(cx - obs.x_meters, cy - obs.y_meters) < r + clusterR + 0.3;
+        }) ?? false;
+        if (nearObs) continue;
+
+        centers.push({ x: cx, y: cy });
+        break;
       }
     }
+
+    // Place orbs around each cluster center
+    const orbsPerCluster = Math.floor(this.numOrbs / Math.max(centers.length, 1));
+    let orbIndex = 0;
+
+    for (const center of centers) {
+      for (let i = 0; i < orbsPerCluster; i++) {
+        const pos = this.findValidOrbNearCenter(center.x, center.y, clusterR, 60);
+        if (pos) this.spawnOrb(pos.x, pos.y, orbIndex++);
+      }
+    }
+
+    // Fill remaining orbs randomly in excavation zone
+    while (orbIndex < this.numOrbs) {
+      const pos = this.findValidPosition(this.orbRadius, 60);
+      if (pos) this.spawnOrb(pos.x, pos.y, orbIndex++);
+      else break;
+    }
+  }
+
+  private findValidOrbNearCenter(cx: number, cy: number, maxR: number, maxAttempts: number): { x: number; y: number } | null {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = Math.random() * maxR;
+      const x = cx + Math.cos(angle) * dist;
+      const y = cy + Math.sin(angle) * dist;
+
+      if (!this.isInExcavationZone(x, y)) continue;
+      if (this.hasOverlap(x, y, this.orbRadius)) continue;
+      return { x, y };
+    }
+    return null;
+  }
+
+  private spawnOrb(x: number, y: number, index: number) {
+    const orb = new DiggableObject({
+      x_meters: x,
+      y_meters: y,
+      radius_meters: this.orbRadius,
+      color: '#8B4513',
+      name: `Regolith_${index}`
+    });
+
+    if (this.environment.physicsEngine) {
+      const x_px = this.environment.metersToPixels(x);
+      const y_px = this.environment.environment_height_px - this.environment.metersToPixels(y);
+      const r_px = this.environment.metersToPixels(this.orbRadius);
+      orb.physicsBody = this.environment.physicsEngine.addDiggable(x_px, y_px, r_px, `Regolith_${index}`);
+    }
+
+    this.diggableObjects.push(orb);
   }
 
   // Find position for a diggable orb (no overlap with existing) within excavation zone
@@ -174,10 +217,11 @@ export class DiggingField implements OnInit, OnDestroy {
       }
     }
 
-    // Check overlap with obstacle field objects (rocks, craters)
+    // Check overlap with obstacle field objects (rocks, craters) — skip boundary walls
     const obstacleField = this.environment.obstacleField;
     if (obstacleField) {
       for (const obstacle of obstacleField.collidableObjects) {
+        if (['Wall_N','Wall_S','Wall_E','Wall_W'].includes(obstacle.name)) continue;
         const dx = x - obstacle.x_meters;
         const dy = y - obstacle.y_meters;
         const distance = Math.sqrt(dx * dx + dy * dy);

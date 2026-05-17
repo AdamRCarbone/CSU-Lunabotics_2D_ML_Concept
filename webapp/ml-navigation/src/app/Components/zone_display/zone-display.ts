@@ -36,9 +36,13 @@ export class ZoneDisplay {
   public targetbermZone_color:  string = ZONE_COLORS.targetBermZone;
   public columnZone_color:      string = ZONE_COLORS.columnPostZone;
 
-  // Legacy accessors used by obstacle-field and rover spawn
-  get startingZone_width_meters():  number { return this.arenaLayout.start.w; }
-  get startingZone_height_meters(): number { return this.arenaLayout.start.h; }
+  // Accessors used by other components
+  get startingZone_width_meters():   number { return this.arenaLayout.start.w; }
+  get startingZone_height_meters():  number { return this.arenaLayout.start.h; }
+  get excavationZone_width_meters(): number { return this.arenaLayout.excavation.w; }
+  get excavationZone_height_meters():number { return this.arenaLayout.excavation.h; }
+  get depositZone_width_meters():    number { return this.arenaLayout.deposit.w; }
+  get depositZone_height_meters():   number { return this.arenaLayout.deposit.h; }
 
   // Zone detection
   public currentZone: Zone = Zone.NONE;

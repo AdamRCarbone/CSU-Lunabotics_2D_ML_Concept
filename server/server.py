@@ -203,7 +203,9 @@ def _sim_loop(cfg, checkpoint_path, init_seed, arena_override):
         arena   = generate_arena(cfg, rng, arena_type=atype)
         if model: model._hidden = None  # type: ignore[attr-defined]
         terrain   = build_terrain_maps(arena, cfg, np_rng)
-        cost_full = _build_cost_map(terrain, cfg)
+        terrain_arr = np.stack([terrain['height'], terrain['rocks'],
+                                terrain['craters'], terrain['walls']])
+        cost_full = _build_cost_map(terrain_arr, cfg)
 
         def _rect(r):
             return {'x': r.x, 'y': r.y, 'w': r.w, 'h': r.h}
