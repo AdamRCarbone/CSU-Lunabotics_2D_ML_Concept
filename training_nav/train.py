@@ -30,9 +30,13 @@ def main():
 
     _dir = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config',   default=os.path.join(_dir, 'config.yaml'))
-    parser.add_argument('--headless', action='store_true')
-    parser.add_argument('--view',     action='store_true')
+    parser.add_argument('--config',      default=os.path.join(_dir, 'config.yaml'))
+    parser.add_argument('--interactive', action='store_true',
+                        help='Prompt for epoch count and dashboard (default: run headlessly)')
+    parser.add_argument('--view',        action='store_true',
+                        help='Open live loss dashboard at localhost:8767')
+    parser.add_argument('--epochs',      type=int, default=None,
+                        help='Override epoch count from config')
     args = parser.parse_args()
 
     with open(args.config) as f:
@@ -48,14 +52,11 @@ def main():
     device_label = (f'cuda ({torch.cuda.get_device_name(0)})'
                     if torch.cuda.is_available() else 'cpu')
 
-    print(f'\n  OCTANE  Navigation Policy Training')
-    print(f'  ---------------------------------')
+    print(f'\n  CSU Lunabotics  Navigation Policy Training')
+    print(f'  ------------------------------------------')
     print(f'  Device : {device_label}')
 
-    if args.headless:
-        max_epochs = tc['epochs']
-        open_gui   = args.view
-    else:
+    if args.interactive:
         raw = input(f'\n  Epochs to train (Enter for {tc["epochs"]}): ').strip()
         max_epochs = int(raw) if raw else tc['epochs']
         if not args.view:
@@ -63,6 +64,10 @@ def main():
             open_gui = raw in ('y', 'yes')
         else:
             open_gui = True
+    else:
+        max_epochs = args.epochs if args.epochs is not None else tc['epochs']
+        open_gui   = args.view
+        print(f'  Epochs : {max_epochs}  (pass --interactive to change)')
 
     if open_gui:
         dashboard.start(port=8767)
