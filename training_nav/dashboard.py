@@ -11,7 +11,10 @@ Usage:
 
 import http.server
 import json
+import os
 import threading
+
+_METRICS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'metrics.json')
 
 _state: dict = {
     'epoch': 0, 'epochs': 0,
@@ -32,6 +35,11 @@ def update(**kw):
     """Thread-safe update of dashboard state. Call once per epoch."""
     with _state_lock:
         _state.update(kw)
+        try:
+            with open(_METRICS_PATH, 'w') as _f:
+                json.dump(_state, _f)
+        except Exception:
+            pass
 
 
 _HTML = r"""<!DOCTYPE html>

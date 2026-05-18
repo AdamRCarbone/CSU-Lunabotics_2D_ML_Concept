@@ -25,6 +25,7 @@ import glob
 import math
 import os
 import random
+import subprocess
 import sys
 import threading
 import time
@@ -32,6 +33,53 @@ import traceback
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from urllib.parse import parse_qs, urlparse
 import json
+
+_REPO_ROOT    = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
+_METRICS_PATH = os.path.join(_REPO_ROOT, 'training_nav', 'metrics.json')
+_TRAIN_SCRIPT = os.path.join(_REPO_ROOT, 'training_nav', 'train.py')
+
+_train_proc: list = [None]   # [subprocess.Popen | None]
+_train_proc_lock = threading.Lock()
+
+
+def _training_status() -> dict:
+    with _train_proc_lock:
+        proc    = _train_proc[0]
+        running = proc is not None and proc.poll() is None
+    status: dict = {'running': running}
+    try:
+        with open(_METRICS_PATH) as f:
+            status.update(json.load(f))
+    except (FileNotFoundError, json.JSONDecodeError):
+        pass
+    status['running'] = running  # proc state overrides stale file value
+    return status
+
+
+def _start_training() -> dict:
+    with _train_proc_lock:
+        proc = _train_proc[0]
+        if proc is not None and proc.poll() is None:
+            return {'ok': False, 'error': 'already running'}
+        _train_proc[0] = subprocess.Popen(
+            [sys.executable, _TRAIN_SCRIPT],
+            cwd=os.path.abspath(_REPO_ROOT),
+        )
+    return {'ok': True}
+
+
+def _stop_training() -> dict:
+    with _train_proc_lock:
+        proc = _train_proc[0]
+        if proc is None or proc.poll() is not None:
+            return {'ok': False, 'error': 'not running'}
+        proc.terminate()
+        try:
+            proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            proc.kill()
+        _train_proc[0] = None
+    return {'ok': True}
 
 import numpy as np
 import yaml
@@ -391,13 +439,29 @@ class _Handler(BaseHTTPRequestHandler):
             except (ValueError, KeyError):
                 pass
             self._json({'timescale': _timescale[0]})
+        elif path == '/api/training/status':
+            self._json(_training_status())
+        else:
+            self.send_error(404)
+
+    def do_POST(self):
+        parsed = urlparse(self.path)
+        path   = parsed.path
+        self.send_response(200)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Cache-Control', 'no-cache')
+        if path == '/api/training/start':
+            self._json(_start_training())
+        elif path == '/api/training/stop':
+            self._json(_stop_training())
         else:
             self.send_error(404)
 
     def do_OPTIONS(self):
         self.send_response(204)
         self.send_header('Access-Control-Allow-Origin', '*')
-        self.send_header('Access-Control-Allow-Methods', 'GET, OPTIONS')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
         self.end_headers()
 
     def _json(self, obj):

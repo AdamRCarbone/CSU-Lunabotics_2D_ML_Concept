@@ -20,6 +20,45 @@ import numpy as np
 from scipy.ndimage import sobel
 
 
+def _smooth_path(path: list, subsample_step: int = 3, n_interp: int = 5) -> list:
+    """Catmull-Rom spline smoothing on A* grid paths.
+
+    Subsamples key waypoints then fits a smooth spline through them,
+    eliminating the jagged 45-degree steps that pure grid A* produces.
+    The smoothed path is passed to extract_action so lookahead targets
+    follow curves rather than grid diagonals.
+    """
+    if len(path) < 4:
+        return path
+
+    indices = list(range(0, len(path), subsample_step))
+    if indices[-1] != len(path) - 1:
+        indices.append(len(path) - 1)
+    wpts = [path[i] for i in indices]
+
+    if len(wpts) < 3:
+        return path
+
+    # Ghost endpoints keep spline tangents well-defined at boundaries
+    pts = [wpts[0]] + wpts + [wpts[-1]]
+
+    smoothed: list = [pts[1]]
+    for i in range(1, len(pts) - 2):
+        p0, p1, p2, p3 = pts[i - 1], pts[i], pts[i + 1], pts[i + 2]
+        for k in range(1, n_interp + 1):
+            t = k / n_interp
+            t2, t3 = t * t, t * t * t
+            r = 0.5 * (2*p1[0] + (-p0[0]+p2[0])*t
+                       + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*t2
+                       + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*t3)
+            c = 0.5 * (2*p1[1] + (-p0[1]+p2[1])*t
+                       + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*t2
+                       + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*t3)
+            smoothed.append((r, c))
+
+    return smoothed
+
+
 _BUCKET_FOR_PHASE = {
     'to_excavation': 0,
     'digging':       1,
@@ -163,6 +202,7 @@ def plan_action(terrain_maps: np.ndarray, goal_heatmap: np.ndarray,
     if path is None or len(path) < 2:
         return None
 
+    path = _smooth_path(path)  # Catmull-Rom: removes grid jagginess before lookahead
     left, right, bucket = extract_action(path, robot_heading, cfg, phase)
 
     # Speed-aware expert: scan ahead on the planned path for obstacles.

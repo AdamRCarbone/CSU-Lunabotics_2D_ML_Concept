@@ -1,0 +1,166 @@
+<style>
+  .tp-card {
+    background: #ffffff;
+    border-radius: 0.875rem;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.1);
+    border: 1px solid rgba(0,0,0,0.06);
+    min-width: 220px;
+  }
+  .tp-header {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(0,0,0,0.07);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #444;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .status-chip {
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: 0.06em;
+  }
+  .chip-running { background: #dcfce7; color: #16a34a; }
+  .chip-idle    { background: #f3f4f6; color: #6b7280; }
+  .chip-done    { background: #dbeafe; color: #1d4ed8; }
+  .chip-stopped { background: #fee2e2; color: #dc2626; }
+
+  .tp-body { padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 0.5rem; }
+  .btn {
+    flex: 1;
+    padding: 0.45rem 0;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn:disabled { opacity: 0.35; cursor: default; }
+  .btn-start { background: #22c55e; color: #fff; }
+  .btn-stop  { background: #ef4444; color: #fff; }
+
+  /* Progress */
+  .progress-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #555; margin-bottom: 4px; }
+  .progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .progress-fill  { height: 100%; background: #0ea5e9; border-radius: 3px; transition: width 0.4s; }
+
+  /* Stage label */
+  .stage-label { font-size: 0.73rem; color: #7c3aed; font-style: italic; }
+
+  /* Chart */
+  .chart-canvas { display: block; width: 100%; border-radius: 6px; }
+  .chart-legend {
+    display: flex; gap: 12px; font-size: 0.7rem; color: #888; margin-top: -2px;
+  }
+  .legend-train::before { content: '■ '; color: #0ea5e9; }
+  .legend-val::before   { content: '■ '; color: #f97316; }
+  .legend-best { margin-left: auto; color: #eab308; font-size: 0.68rem; }
+
+  /* Metrics table */
+  .metrics { display: flex; flex-direction: column; gap: 0; }
+  .metric-row {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 4px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.75rem;
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .mkey { color: #888; }
+  .mval { font-family: 'Menlo', 'Consolas', monospace; color: #222; }
+  .mval-warn { color: #f97316; font-weight: 600; }
+
+  .no-conn { font-size: 0.72rem; color: #aaa; text-align: center; padding: 0.25rem 0; }
+</style>
+
+<div class="tp-card">
+  <div class="tp-header">
+    <span>Training</span>
+    <span class="status-chip"
+          [class.chip-running]="status?.running"
+          [class.chip-idle]="!status?.running && status?.status === 'idle'"
+          [class.chip-done]="status?.status === 'done'"
+          [class.chip-stopped]="status?.status === 'stopped' && !status?.running">
+      {{ (status?.running ? 'running' : status?.status || 'idle') | uppercase }}
+    </span>
+  </div>
+
+  <div class="tp-body">
+
+    <!-- Server disconnected notice -->
+    <div class="no-conn" *ngIf="!connected">server offline</div>
+
+    <!-- Start / Stop -->
+    <div class="btn-row">
+      <button class="btn btn-start" [disabled]="!connected || status?.running" (click)="start()">▶ Start</button>
+      <button class="btn btn-stop"  [disabled]="!connected || !status?.running" (click)="stop()">■ Stop</button>
+    </div>
+
+    <!-- Epoch progress -->
+    <div>
+      <div class="progress-row">
+        <span>Epoch</span>
+        <span>{{ status?.epoch || 0 }} / {{ status?.epochs || 0 }}</span>
+      </div>
+      <div class="progress-track">
+        <div class="progress-fill" [style.width.%]="progressPct"></div>
+      </div>
+    </div>
+
+    <!-- Stage -->
+    <div class="stage-label" *ngIf="status?.stage_name">
+      Stage {{ status?.stage }} — {{ status?.stage_name }}
+    </div>
+
+    <!-- Loss chart -->
+    <canvas #lossCanvas class="chart-canvas" height="100"></canvas>
+    <div class="chart-legend">
+      <span class="legend-train">Train</span>
+      <span class="legend-val">Val</span>
+      <span class="legend-best" *ngIf="status?.best_val != null">
+        best {{ status?.best_val?.toFixed(4) }}
+      </span>
+    </div>
+
+    <!-- Metrics -->
+    <div class="metrics">
+      <div class="metric-row">
+        <span class="mkey">Train loss</span>
+        <span class="mval">{{ fmt(status?.train_loss) }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="mkey">Val loss</span>
+        <span class="mval">{{ fmt(status?.val_loss) }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="mkey">Learning rate</span>
+        <span class="mval">{{ latestLR }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="mkey">No-improve</span>
+        <span class="mval" [class.mval-warn]="noImproveWarn">
+          {{ status?.no_improve || 0 }} / {{ status?.patience || 20 }}
+        </span>
+      </div>
+      <div class="metric-row">
+        <span class="mkey">Device</span>
+        <span class="mval">{{ status?.device || '—' }}</span>
+      </div>
+      <div class="metric-row">
+        <span class="mkey">Elapsed</span>
+        <span class="mval">{{ elapsedStr }}</span>
+      </div>
+      <div class="metric-row" *ngIf="etaStr">
+        <span class="mkey">ETA</span>
+        <span class="mval">{{ etaStr }}</span>
+      </div>
+    </div>
+
+  </div>
+</div>

@@ -11,11 +11,12 @@ import { ResetTrigger } from './services/reset-trigger';
 import { Subscription } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { CollidableObject } from './Components/collidable-object/collidable-object';
+import { TrainingPanelComponent } from './Components/training-panel/training-panel';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, CommonModule],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, CommonModule, TrainingPanelComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })
