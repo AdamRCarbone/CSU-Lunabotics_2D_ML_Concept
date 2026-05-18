@@ -216,8 +216,12 @@ def plan_action(terrain_maps: np.ndarray, goal_heatmap: np.ndarray,
     nav_limit = float(cfg.get('robot', {}).get('nav_speed_nominal',
                       cfg.get('robot', {}).get('nav_speed_limit', 1.0)))
 
+    rows, cols = terrain_maps.shape[1], terrain_maps.shape[2]
     for pr, pc_ in path[1 : n_look + 1]:
-        obs = float(terrain_maps[1][pr, pc_] + terrain_maps[2][pr, pc_])
+        ir, ic = int(round(pr)), int(round(pc_))
+        if not (0 <= ir < rows and 0 <= ic < cols):
+            continue
+        obs = float(terrain_maps[1][ir, ic] + terrain_maps[2][ir, ic])
         if obs > 0.20:
             # Scale inversely with obstacle intensity, floor at slow_min
             scale = float(np.clip(1.0 - obs * 1.8, slow_min, 1.0))
