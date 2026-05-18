@@ -4,10 +4,10 @@
     border-radius: 0.875rem;
     box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     border: 1px solid rgba(0,0,0,0.06);
-    min-width: 220px;
+    width: 100%;
   }
   .tp-header {
-    padding: 0.75rem 1rem;
+    padding: 0.75rem 1.25rem;
     border-bottom: 1px solid rgba(0,0,0,0.07);
     font-size: 0.85rem;
     font-weight: 600;
@@ -16,12 +16,12 @@
     letter-spacing: 0.04em;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 0.75rem;
   }
   .status-chip {
     font-size: 0.68rem;
     font-weight: 700;
-    padding: 2px 8px;
+    padding: 2px 10px;
     border-radius: 99px;
     letter-spacing: 0.06em;
   }
@@ -29,139 +29,157 @@
   .chip-idle    { background: #f3f4f6; color: #6b7280; }
   .chip-done    { background: #dbeafe; color: #1d4ed8; }
   .chip-stopped { background: #fee2e2; color: #dc2626; }
+  .no-conn-chip {
+    font-size: 0.68rem; color: #aaa;
+    background: #f9fafb; border: 1px solid #e5e7eb;
+    padding: 2px 8px; border-radius: 99px;
+  }
 
-  .tp-body { padding: 0.875rem 1rem; display: flex; flex-direction: column; gap: 0.75rem; }
+  /* Horizontal body — 3 columns */
+  .tp-body {
+    display: grid;
+    grid-template-columns: 220px 1fr 220px;
+    gap: 0;
+  }
+  .tp-col {
+    padding: 1rem 1.25rem;
+  }
+  .tp-col + .tp-col {
+    border-left: 1px solid rgba(0,0,0,0.06);
+  }
 
-  /* Buttons */
-  .btn-row { display: flex; gap: 0.5rem; }
+  /* ── Left col: controls ── */
+  .btn-row { display: flex; gap: 0.5rem; margin-bottom: 1rem; }
   .btn {
-    flex: 1;
-    padding: 0.45rem 0;
-    border: none;
-    border-radius: 0.5rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: opacity 0.15s;
+    flex: 1; padding: 0.5rem 0; border: none; border-radius: 0.5rem;
+    font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: opacity 0.15s;
   }
   .btn:disabled { opacity: 0.35; cursor: default; }
   .btn-start { background: #22c55e; color: #fff; }
   .btn-stop  { background: #ef4444; color: #fff; }
 
-  /* Progress */
-  .progress-row { display: flex; justify-content: space-between; font-size: 0.75rem; color: #555; margin-bottom: 4px; }
-  .progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; }
+  .ctrl-label {
+    font-size: 0.7rem; color: #888; text-transform: uppercase;
+    letter-spacing: 0.06em; margin-bottom: 3px;
+  }
+  .progress-track { height: 6px; background: #e5e7eb; border-radius: 3px; overflow: hidden; margin-bottom: 0.75rem; }
   .progress-fill  { height: 100%; background: #0ea5e9; border-radius: 3px; transition: width 0.4s; }
+  .epoch-label    { font-size: 0.82rem; color: #222; font-family: 'Menlo','Consolas',monospace; margin-bottom: 4px; }
+  .stage-label    { font-size: 0.73rem; color: #7c3aed; font-style: italic; margin-top: 0.5rem; }
 
-  /* Stage label */
-  .stage-label { font-size: 0.73rem; color: #7c3aed; font-style: italic; }
-
-  /* Chart */
-  .chart-canvas { display: block; width: 100%; border-radius: 6px; }
+  /* ── Center col: chart ── */
+  .chart-wrap { display: flex; flex-direction: column; height: 100%; }
+  .chart-canvas { display: block; width: 100%; flex: 1; min-height: 120px; border-radius: 6px; }
   .chart-legend {
-    display: flex; gap: 12px; font-size: 0.7rem; color: #888; margin-top: -2px;
+    display: flex; gap: 12px; font-size: 0.7rem; color: #888;
+    margin-top: 6px; align-items: center;
   }
   .legend-train::before { content: '■ '; color: #0ea5e9; }
   .legend-val::before   { content: '■ '; color: #f97316; }
   .legend-best { margin-left: auto; color: #eab308; font-size: 0.68rem; }
 
-  /* Metrics table */
+  /* ── Right col: metrics ── */
   .metrics { display: flex; flex-direction: column; gap: 0; }
   .metric-row {
     display: flex; justify-content: space-between; align-items: baseline;
-    padding: 4px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.75rem;
+    padding: 5px 0; border-bottom: 1px solid #f3f4f6; font-size: 0.75rem;
   }
   .metric-row:last-child { border-bottom: none; }
   .mkey { color: #888; }
-  .mval { font-family: 'Menlo', 'Consolas', monospace; color: #222; }
+  .mval { font-family: 'Menlo','Consolas',monospace; color: #222; }
   .mval-warn { color: #f97316; font-weight: 600; }
-
-  .no-conn { font-size: 0.72rem; color: #aaa; text-align: center; padding: 0.25rem 0; }
+  .mval-best { color: #eab308; font-weight: 600; }
 </style>
 
 <div class="tp-card">
   <div class="tp-header">
     <span>Training</span>
-    <span class="status-chip"
-          [class.chip-running]="status?.running"
-          [class.chip-idle]="!status?.running && status?.status === 'idle'"
-          [class.chip-done]="status?.status === 'done'"
-          [class.chip-stopped]="status?.status === 'stopped' && !status?.running">
-      {{ (status?.running ? 'running' : status?.status || 'idle') | uppercase }}
-    </span>
+    @if (!connected) {
+      <span class="no-conn-chip">server offline — run: python server/server.py</span>
+    }
+    @if (connected) {
+      <span class="status-chip"
+            [class.chip-running]="status?.running"
+            [class.chip-idle]="!status?.running && (status?.status === 'idle' || status?.status === 'starting')"
+            [class.chip-done]="status?.status === 'done'"
+            [class.chip-stopped]="status?.status === 'stopped' && !status?.running">
+        {{ (status?.running ? 'running' : status?.status || 'idle') | uppercase }}
+      </span>
+    }
   </div>
 
   <div class="tp-body">
 
-    <!-- Server disconnected notice -->
-    @if (!connected) { <div class="no-conn">server offline</div> }
-
-    <!-- Start / Stop -->
-    <div class="btn-row">
-      <button class="btn btn-start" [disabled]="!connected || status?.running" (click)="start()">▶ Start</button>
-      <button class="btn btn-stop"  [disabled]="!connected || !status?.running" (click)="stop()">■ Stop</button>
-    </div>
-
-    <!-- Epoch progress -->
-    <div>
-      <div class="progress-row">
-        <span>Epoch</span>
-        <span>{{ status?.epoch || 0 }} / {{ status?.epochs || 0 }}</span>
+    <!-- ── Left: controls + progress ── -->
+    <div class="tp-col">
+      <div class="btn-row">
+        <button class="btn btn-start" [disabled]="!connected || !!status?.running" (click)="start()">▶ Start</button>
+        <button class="btn btn-stop"  [disabled]="!connected || !status?.running"  (click)="stop()">■ Stop</button>
       </div>
+
+      <div class="ctrl-label">Epoch</div>
+      <div class="epoch-label">{{ status?.epoch || 0 }} / {{ status?.epochs || 0 }}</div>
       <div class="progress-track">
         <div class="progress-fill" [style.width.%]="progressPct"></div>
       </div>
-    </div>
 
-    <!-- Stage -->
-    @if (status?.stage_name) {
-      <div class="stage-label">Stage {{ status?.stage }} — {{ status?.stage_name }}</div>
-    }
-
-    <!-- Loss chart -->
-    <canvas #lossCanvas class="chart-canvas" height="100"></canvas>
-    <div class="chart-legend">
-      <span class="legend-train">Train</span>
-      <span class="legend-val">Val</span>
-      @if (status?.best_val != null) {
-        <span class="legend-best">best {{ status?.best_val?.toFixed(4) }}</span>
+      @if (status?.stage_name) {
+        <div class="stage-label">Stage {{ status?.stage }} — {{ status?.stage_name }}</div>
       }
     </div>
 
-    <!-- Metrics -->
-    <div class="metrics">
-      <div class="metric-row">
-        <span class="mkey">Train loss</span>
-        <span class="mval">{{ fmt(status?.train_loss) }}</span>
+    <!-- ── Center: loss chart ── -->
+    <div class="tp-col chart-wrap">
+      <canvas #lossCanvas class="chart-canvas" height="130"></canvas>
+      <div class="chart-legend">
+        <span class="legend-train">Train</span>
+        <span class="legend-val">Val</span>
+        @if (status?.best_val != null) {
+          <span class="legend-best">best {{ status?.best_val?.toFixed(4) }}</span>
+        }
       </div>
-      <div class="metric-row">
-        <span class="mkey">Val loss</span>
-        <span class="mval">{{ fmt(status?.val_loss) }}</span>
-      </div>
-      <div class="metric-row">
-        <span class="mkey">Learning rate</span>
-        <span class="mval">{{ latestLR }}</span>
-      </div>
-      <div class="metric-row">
-        <span class="mkey">No-improve</span>
-        <span class="mval" [class.mval-warn]="noImproveWarn">
-          {{ status?.no_improve || 0 }} / {{ status?.patience || 20 }}
-        </span>
-      </div>
-      <div class="metric-row">
-        <span class="mkey">Device</span>
-        <span class="mval">{{ status?.device || '—' }}</span>
-      </div>
-      <div class="metric-row">
-        <span class="mkey">Elapsed</span>
-        <span class="mval">{{ elapsedStr }}</span>
-      </div>
-      @if (etaStr) {
+    </div>
+
+    <!-- ── Right: metrics ── -->
+    <div class="tp-col">
+      <div class="metrics">
         <div class="metric-row">
-          <span class="mkey">ETA</span>
-          <span class="mval">{{ etaStr }}</span>
+          <span class="mkey">Train loss</span>
+          <span class="mval">{{ fmt(status?.train_loss) }}</span>
         </div>
-      }
+        <div class="metric-row">
+          <span class="mkey">Val loss</span>
+          <span class="mval">{{ fmt(status?.val_loss) }}</span>
+        </div>
+        <div class="metric-row">
+          <span class="mkey">Best val</span>
+          <span class="mval mval-best">{{ status?.best_val != null ? status!.best_val!.toFixed(4) : '—' }}</span>
+        </div>
+        <div class="metric-row">
+          <span class="mkey">Learning rate</span>
+          <span class="mval">{{ latestLR }}</span>
+        </div>
+        <div class="metric-row">
+          <span class="mkey">No-improve</span>
+          <span class="mval" [class.mval-warn]="noImproveWarn">
+            {{ status?.no_improve || 0 }} / {{ status?.patience || 20 }}
+          </span>
+        </div>
+        <div class="metric-row">
+          <span class="mkey">Device</span>
+          <span class="mval">{{ status?.device || '—' }}</span>
+        </div>
+        <div class="metric-row">
+          <span class="mkey">Elapsed</span>
+          <span class="mval">{{ elapsedStr }}</span>
+        </div>
+        @if (etaStr) {
+          <div class="metric-row">
+            <span class="mkey">ETA</span>
+            <span class="mval">{{ etaStr }}</span>
+          </div>
+        }
+      </div>
     </div>
 
   </div>

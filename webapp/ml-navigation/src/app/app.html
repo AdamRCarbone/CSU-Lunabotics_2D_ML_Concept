@@ -169,11 +169,8 @@
       [roverRightMotor]="rightMotorValue">
     </app-environment>
 
-    <!-- ── Right: Controls + Training Panel ── -->
+    <!-- ── Right: Controls ── -->
     <div class="right-section">
-
-      <!-- Training control panel -->
-      <app-training-panel></app-training-panel>
 
       <!-- Motor controls + speed strip -->
       <div class="card" style="min-width: 220px;">
@@ -253,4 +250,10 @@
 
     </div>
   </div>
+
+  <!-- ── Training panel — full width below canvas row ── -->
+  <div style="width:100%; max-width:1800px;">
+    <app-training-panel></app-training-panel>
+  </div>
+
 </main>

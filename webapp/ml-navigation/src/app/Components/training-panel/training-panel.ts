@@ -86,10 +86,10 @@ export class TrainingPanelComponent implements OnInit, AfterViewInit, OnDestroy 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const W = canvas.offsetWidth || canvas.width;
+    const W = canvas.parentElement?.clientWidth || canvas.offsetWidth || 400;
+    const H = 130;
     canvas.width  = W;
-    canvas.height = 100;
-    const H = 100;
+    canvas.height = H;
 
     ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#f8f9fa';

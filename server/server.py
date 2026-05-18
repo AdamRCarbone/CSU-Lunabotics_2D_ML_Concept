@@ -62,8 +62,9 @@ def _start_training() -> dict:
         if proc is not None and proc.poll() is None:
             return {'ok': False, 'error': 'already running'}
         _train_proc[0] = subprocess.Popen(
-            [sys.executable, _TRAIN_SCRIPT],
+            [sys.executable, _TRAIN_SCRIPT, '--headless'],
             cwd=os.path.abspath(_REPO_ROOT),
+            stdin=subprocess.DEVNULL,
         )
     return {'ok': True}
 
