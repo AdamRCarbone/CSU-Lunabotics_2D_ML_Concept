@@ -61,10 +61,13 @@ def _start_training() -> dict:
         proc = _train_proc[0]
         if proc is not None and proc.poll() is None:
             return {'ok': False, 'error': 'already running'}
+        env = os.environ.copy()
+        env['PYTHONUTF8'] = '1'   # force UTF-8 I/O on Windows (box/arrow chars)
         _train_proc[0] = subprocess.Popen(
             [sys.executable, _TRAIN_SCRIPT, '--headless'],
             cwd=os.path.abspath(_REPO_ROOT),
             stdin=subprocess.DEVNULL,
+            env=env,
         )
     return {'ok': True}
 

@@ -22,6 +22,12 @@ from training_nav.trainer import run_training
 
 
 def main():
+    # Windows cp1252 can't encode box/arrow chars — force UTF-8 for all output
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+    if hasattr(sys.stderr, 'reconfigure'):
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+
     _dir = os.path.dirname(os.path.abspath(__file__))
     parser = argparse.ArgumentParser()
     parser.add_argument('--config',   default=os.path.join(_dir, 'config.yaml'))
@@ -43,7 +49,7 @@ def main():
                     if torch.cuda.is_available() else 'cpu')
 
     print(f'\n  OCTANE  Navigation Policy Training')
-    print(f'  ─────────────────────────────────')
+    print(f'  ---------------------------------')
     print(f'  Device : {device_label}')
 
     if args.headless:
@@ -81,7 +87,8 @@ def main():
     val_loader   = DataLoader(val_ds,   batch_size=tc['batch_size'], shuffle=False,
                               num_workers=nw, pin_memory=pin, persistent_workers=persist)
 
-    print(f'  Train  : {n_train} samples/epoch  ({tc["batch_size"]} batch × {tc["model"]["seq_len"]} seq = {tc["batch_size"]*tc["model"]["seq_len"]} frames/step)')
+    seq_len = cfg['model']['seq_len']
+    print(f'  Train  : {n_train} samples/epoch  ({tc["batch_size"]} batch x {seq_len} seq = {tc["batch_size"]*seq_len} frames/step)')
     print(f'  Val    : {n_val} samples/epoch')
     print(f'  Workers: {nw}')
 

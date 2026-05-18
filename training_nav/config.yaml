@@ -83,7 +83,7 @@ training:
   weight_decay: 1.0e-4
   val_ratio: 0.1
   seed: 42
-  num_workers: -1
+  num_workers: 0   # 0 = main process only (required on Windows — multiprocessing crashes with CUDA DLLs)
   arenas_per_epoch: 500
   samples_per_arena: 20
   scale_min: 1.0
