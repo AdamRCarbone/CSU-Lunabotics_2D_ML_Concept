@@ -30,7 +30,7 @@ import sys
 import threading
 import time
 import traceback
-from http.server import BaseHTTPRequestHandler, HTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlparse
 import json
 
@@ -500,7 +500,7 @@ def main():
     )
     sim_thread.start()
 
-    server = HTTPServer(('localhost', args.port), _Handler)
+    server = ThreadingHTTPServer(('localhost', args.port), _Handler)
     print(f'[server]  http://localhost:{args.port}  (Ctrl+C to stop)')
     print(f'[server]  Angular dev server: http://localhost:4200')
     try:
