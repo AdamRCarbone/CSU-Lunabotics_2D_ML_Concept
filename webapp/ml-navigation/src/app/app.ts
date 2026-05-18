@@ -79,6 +79,7 @@ export class App implements AfterViewInit, OnDestroy {
   }
 
   public sensorGroups: { type: string; items: CollidableObject[] }[] = [];
+  public envHeightPx: number | undefined = undefined;
 
   private _refreshSensorGroups() {
     const all      = this.environment?.obstacleField?.collidableObjects || [];
@@ -134,6 +135,7 @@ export class App implements AfterViewInit, OnDestroy {
             if (this.environment.rover) {
               this.updateRoverPosition();
               this.currentZone = this.environment.currentZone;
+              this.envHeightPx = this.environment.environment_height_px;
               this._refreshSensorGroups();
               this.cdr.markForCheck();
             }
