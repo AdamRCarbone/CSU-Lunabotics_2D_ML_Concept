@@ -37,6 +37,7 @@ import json
 _REPO_ROOT    = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..')
 _METRICS_PATH = os.path.join(_REPO_ROOT, 'training_nav', 'metrics.json')
 _TRAIN_SCRIPT = os.path.join(_REPO_ROOT, 'training_nav', 'train.py')
+_TRAIN_LOG    = os.path.join(_REPO_ROOT, 'training_nav', 'train.log')
 
 _train_proc: list = [None]   # [subprocess.Popen | None]
 _train_proc_lock = threading.Lock()
@@ -44,9 +45,12 @@ _train_proc_lock = threading.Lock()
 
 def _training_status() -> dict:
     with _train_proc_lock:
-        proc    = _train_proc[0]
-        running = proc is not None and proc.poll() is None
+        proc     = _train_proc[0]
+        running  = proc is not None and proc.poll() is None
+        exitcode = proc.returncode if proc is not None and proc.poll() is not None else None
     status: dict = {'running': running}
+    if exitcode is not None:
+        status['exitcode'] = exitcode
     try:
         with open(_METRICS_PATH) as f:
             status.update(json.load(f))
@@ -56,6 +60,15 @@ def _training_status() -> dict:
     return status
 
 
+def _training_log(tail: int = 80) -> str:
+    try:
+        with open(_TRAIN_LOG, encoding='utf-8', errors='replace') as f:
+            lines = f.readlines()
+        return ''.join(lines[-tail:])
+    except FileNotFoundError:
+        return '(no log yet)'
+
+
 def _start_training() -> dict:
     with _train_proc_lock:
         proc = _train_proc[0]
@@ -63,12 +76,16 @@ def _start_training() -> dict:
             return {'ok': False, 'error': 'already running'}
         env = os.environ.copy()
         env['PYTHONUTF8'] = '1'   # force UTF-8 I/O on Windows (box/arrow chars)
+        log_fh = open(_TRAIN_LOG, 'w', encoding='utf-8', errors='replace')
         _train_proc[0] = subprocess.Popen(
             [sys.executable, _TRAIN_SCRIPT, '--headless'],
             cwd=os.path.abspath(_REPO_ROOT),
             stdin=subprocess.DEVNULL,
+            stdout=log_fh,
+            stderr=log_fh,
             env=env,
         )
+        print(f'[server] training started (pid {_train_proc[0].pid}), log → {_TRAIN_LOG}')
     return {'ok': True}
 
 
@@ -445,6 +462,14 @@ class _Handler(BaseHTTPRequestHandler):
             self._json({'timescale': _timescale[0]})
         elif path == '/api/training/status':
             self._json(_training_status())
+        elif path == '/api/training/log':
+            tail = int(qs.get('tail', ['80'])[0])
+            enc = _training_log(tail).encode('utf-8', errors='replace')
+            self.send_header('Content-Type', 'text/plain; charset=utf-8')
+            self.send_header('Content-Length', len(enc))
+            self.end_headers()
+            self.wfile.write(enc)
+            return
         else:
             self.send_error(404)
 

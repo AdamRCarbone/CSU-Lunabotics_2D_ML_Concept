@@ -183,4 +183,27 @@
     </div>
 
   </div>
+
+  <!-- Log strip — always visible when connected, shows last 60 lines from train.log -->
+  @if (connected && log) {
+    <div style="border-top: 1px solid rgba(0,0,0,0.06);">
+      <div style="display:flex; align-items:center; gap:0.5rem; padding:0.4rem 1.25rem; cursor:pointer; user-select:none;"
+           (click)="showLog = !showLog">
+        <span style="font-size:0.7rem; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; color:#888;">
+          Train log
+        </span>
+        @if (status && !status.running && status.exitcode != null && status.exitcode !== 0) {
+          <span style="font-size:0.68rem; background:#fee2e2; color:#dc2626; padding:1px 8px; border-radius:99px;">
+            exit {{ status.exitcode }}
+          </span>
+        }
+        <span style="font-size:0.7rem; color:#aaa; margin-left:auto;">{{ showLog ? '▲ hide' : '▼ show' }}</span>
+      </div>
+      @if (showLog) {
+        <pre style="margin:0; padding:0.5rem 1.25rem 0.75rem; font-size:0.7rem; font-family:'Menlo','Consolas',monospace;
+                    white-space:pre-wrap; word-break:break-all; color:#333; background:#f8f9fa;
+                    max-height:180px; overflow-y:auto; border-radius:0 0 0.875rem 0.875rem;">{{ log }}</pre>
+      }
+    </div>
+  }
 </div>

@@ -17,6 +17,8 @@ export class TrainingPanelComponent implements OnInit, AfterViewInit, OnDestroy 
 
   status: TrainingStatus | null = null;
   connected = false;
+  log = '';
+  showLog = false;
 
   private _subs: Subscription[] = [];
 
@@ -35,6 +37,10 @@ export class TrainingPanelComponent implements OnInit, AfterViewInit, OnDestroy 
       }),
       this.trainingService.connected$.subscribe(c => {
         this.connected = c;
+        this.cdr.markForCheck();
+      }),
+      this.trainingService.log$.subscribe(l => {
+        this.log = l;
         this.cdr.markForCheck();
       }),
     );

@@ -18,6 +18,7 @@ export interface TrainingStatus {
   no_improve: number;
   patience:   number;
   status:     string;
+  exitcode?:  number;
 }
 
 const _DEFAULT: TrainingStatus = {
@@ -33,6 +34,7 @@ export class TrainingService {
 
   readonly status$    = new BehaviorSubject<TrainingStatus>(_DEFAULT);
   readonly connected$ = new BehaviorSubject<boolean>(false);
+  readonly log$       = new BehaviorSubject<string>('');
 
   private _interval: ReturnType<typeof setInterval> | null = null;
 
@@ -48,14 +50,24 @@ export class TrainingService {
       const s: TrainingStatus = await r.json();
       this.status$.next(s);
       this.connected$.next(true);
+      // fetch log whenever connected (cheap, tail=60)
+      this._fetchLog();
     } catch {
       this.connected$.next(false);
     }
   }
 
+  private async _fetchLog() {
+    try {
+      const r = await fetch(`${this.BASE}/api/training/log?tail=60`);
+      if (r.ok) this.log$.next(await r.text());
+    } catch { /* ignore */ }
+  }
+
   async start(): Promise<void> {
     await fetch(`${this.BASE}/api/training/start`, { method: 'POST' }).catch(() => {});
-    setTimeout(() => this._poll(), 600);
+    setTimeout(() => this._poll(), 800);
+    setTimeout(() => this._poll(), 2000);
   }
 
   async stop(): Promise<void> {
