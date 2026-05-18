@@ -9,14 +9,14 @@ import { ZoneLegend } from './Components/zone-legend/zone-legend';
 import { Zone } from './enums/zone.enum';
 import { ResetTrigger } from './services/reset-trigger';
 import { Subscription } from 'rxjs';
-import { CommonModule } from '@angular/common';
+import { NgIf, NgFor } from '@angular/common';
 import { CollidableObject } from './Components/collidable-object/collidable-object';
 import { TrainingPanelComponent } from './Components/training-panel/training-panel';
 
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, CommonModule, TrainingPanelComponent],
+  imports: [RouterOutlet, EnvironmentComponent, UniversalSliderComponent, ParameterDisplay, ZoneLegend, NgIf, NgFor, TrainingPanelComponent],
   templateUrl: './app.html',
   styleUrls: ['./app.css']
 })

@@ -2,14 +2,14 @@ import {
   Component, OnInit, OnDestroy, AfterViewInit,
   ViewChild, ElementRef, ChangeDetectorRef, NgZone,
 } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { UpperCasePipe } from '@angular/common';
 import { Subscription } from 'rxjs';
 import { TrainingService, TrainingStatus } from '../../services/training/training.service';
 
 @Component({
   selector: 'app-training-panel',
   standalone: true,
-  imports: [CommonModule],
+  imports: [UpperCasePipe],
   templateUrl: './training-panel.html',
 })
 export class TrainingPanelComponent implements OnInit, AfterViewInit, OnDestroy {

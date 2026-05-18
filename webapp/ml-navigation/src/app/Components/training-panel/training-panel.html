@@ -94,7 +94,7 @@
   <div class="tp-body">
 
     <!-- Server disconnected notice -->
-    <div class="no-conn" *ngIf="!connected">server offline</div>
+    @if (!connected) { <div class="no-conn">server offline</div> }
 
     <!-- Start / Stop -->
     <div class="btn-row">
@@ -114,18 +114,18 @@
     </div>
 
     <!-- Stage -->
-    <div class="stage-label" *ngIf="status?.stage_name">
-      Stage {{ status?.stage }} — {{ status?.stage_name }}
-    </div>
+    @if (status?.stage_name) {
+      <div class="stage-label">Stage {{ status?.stage }} — {{ status?.stage_name }}</div>
+    }
 
     <!-- Loss chart -->
     <canvas #lossCanvas class="chart-canvas" height="100"></canvas>
     <div class="chart-legend">
       <span class="legend-train">Train</span>
       <span class="legend-val">Val</span>
-      <span class="legend-best" *ngIf="status?.best_val != null">
-        best {{ status?.best_val?.toFixed(4) }}
-      </span>
+      @if (status?.best_val != null) {
+        <span class="legend-best">best {{ status?.best_val?.toFixed(4) }}</span>
+      }
     </div>
 
     <!-- Metrics -->
@@ -156,10 +156,12 @@
         <span class="mkey">Elapsed</span>
         <span class="mval">{{ elapsedStr }}</span>
       </div>
-      <div class="metric-row" *ngIf="etaStr">
-        <span class="mkey">ETA</span>
-        <span class="mval">{{ etaStr }}</span>
-      </div>
+      @if (etaStr) {
+        <div class="metric-row">
+          <span class="mkey">ETA</span>
+          <span class="mval">{{ etaStr }}</span>
+        </div>
+      }
     </div>
 
   </div>
