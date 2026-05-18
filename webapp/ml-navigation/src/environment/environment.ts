@@ -164,7 +164,8 @@ export class EnvironmentComponent implements OnInit, OnDestroy {
       }
     });
 
-    // Initialize p5.js
+    // Initialize p5.js — disable FES so acorn doesn't choke on TypeScript syntax
+    (p5 as any).disableFriendlyErrors = true;
     this.p5Instance = new p5((p: p5) => {
       p.setup = () => {
         const wb = this.wallBand_px;
