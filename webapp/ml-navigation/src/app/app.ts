@@ -78,13 +78,14 @@ export class App implements AfterViewInit, OnDestroy {
     ];
   }
 
-  /** Groups of obstacles for the sensor inputs panel. */
-  get sensorGroups(): { type: string; items: CollidableObject[] }[] {
-    const all = this.environment?.obstacleField?.collidableObjects || [];
+  public sensorGroups: { type: string; items: CollidableObject[] }[] = [];
+
+  private _refreshSensorGroups() {
+    const all      = this.environment?.obstacleField?.collidableObjects || [];
     const rocks    = all.filter(o => o.name.startsWith('Rock'));
     const craters  = all.filter(o => o.name.startsWith('Crater'));
     const boundary = all.filter(o => ['Wall_N','Wall_S','Wall_E','Wall_W'].includes(o.name));
-    return [
+    this.sensorGroups = [
       { type: 'Rocks',    items: rocks    },
       { type: 'Craters',  items: craters  },
       { type: 'Boundary', items: boundary },
@@ -133,6 +134,7 @@ export class App implements AfterViewInit, OnDestroy {
             if (this.environment.rover) {
               this.updateRoverPosition();
               this.currentZone = this.environment.currentZone;
+              this._refreshSensorGroups();
               this.cdr.markForCheck();
             }
           });
